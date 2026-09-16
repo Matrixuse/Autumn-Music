@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+:root { font-family: 'DM Sans', sans-serif; color: #f7f4ee; background: #0d0e0c; font-synthesis: none; text-rendering: optimizeLegibility; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: #0d0e0c; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { scrollbar-width: none; }
+.custom-scrollbar { scrollbar-color: #4a4138 #111311; scrollbar-width: thin; }
+.custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #111311; border-radius: 999px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #4a4138; border: 2px solid #111311; border-radius: 999px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #8b6338; }
+.range-amber { accent-color: #e6a44a; }
+.art-sheen { background: linear-gradient(135deg, #2d2a22 0%, #7d502f 44%, #c48745 100%); }
+.surface-glow { box-shadow: 0 20px 80px rgba(203, 137, 58, .08); }
+.loader {
+	width: 60px;
+	aspect-ratio: 4;
+	--_g: no-repeat radial-gradient(circle closest-side, #fff 90%, #0000);
+	background: var(--_g) 0% 50%, var(--_g) 50% 50%, var(--_g) 100% 50%;
+	background-size: calc(100% / 3) 100%;
+	animation: autumn-loader 1s infinite linear;
+}
+@keyframes autumn-loader {
+	33% { background-size: calc(100% / 3) 0%, calc(100% / 3) 100%, calc(100% / 3) 100%; }
+	50% { background-size: calc(100% / 3) 100%, calc(100% / 3) 0%, calc(100% / 3) 100%; }
+	66% { background-size: calc(100% / 3) 100%, calc(100% / 3) 100%, calc(100% / 3) 0%; }
+}
+@keyframes queue-reveal {
+	from { opacity: 0; transform: translateY(14px); }
+	to { opacity: 1; transform: translateY(0); }
+}
