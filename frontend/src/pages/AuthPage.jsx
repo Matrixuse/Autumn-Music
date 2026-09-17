@@ -145,13 +145,13 @@ export default function AuthPage({ mode = 'login' }) {
                             <span className="mb-2 block text-sm font-semibold text-white/60">
                                 Username
                             </span>
-                            <input required minLength="3" maxLength="32" pattern="[a-zA-Z0-9_]+" name="username" value={form.username} onChange={update} placeholder="Enter Username" className="w-full rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm outline-none transition placeholder:text-white/25 focus:border-[#e6a44a] focus:bg-white/9" />
+                            <input required minLength="3" maxLength="32" pattern="[a-zA-Z0-9_]+" autoComplete="username" name="username" value={form.username} onChange={update} placeholder="Enter Username" className="w-full rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm outline-none transition placeholder:text-white/25 focus:border-[#e6a44a] focus:bg-white/9" />
                         </label>}
                         <label className="block">
                             <span className="mb-2 block text-sm font-semibold text-white/60">
                                 Email
                             </span>
-                            <input required type="email" name="email" value={form.email} onChange={update} placeholder="you@example.com" className="w-full rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm outline-none transition placeholder:text-white/25 focus:border-[#e6a44a] focus:bg-white/9" />
+                            <input required type="email" autoComplete="email" name="email" value={form.email} onChange={update} placeholder="you@example.com" className="w-full rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm outline-none transition placeholder:text-white/25 focus:border-[#e6a44a] focus:bg-white/9" />
                         </label>
                         <label className="block">
                             <span className="mb-2 block text-sm font-semibold text-white/60">

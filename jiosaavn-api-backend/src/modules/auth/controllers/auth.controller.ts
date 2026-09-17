@@ -6,7 +6,7 @@ import { UserModel } from '#modules/auth/models'
 import { AuthError, AuthService } from '#modules/auth/services'
 
 const SESSION_COOKIE = 'jiosaavn_session'
-const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 10
+const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 400
 const sessionCookieOptions = {
   httpOnly: true,
   sameSite: 'Lax' as const,
