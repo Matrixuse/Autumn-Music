@@ -54,6 +54,17 @@ const getSuggestedLibrarySongs = (fallbackSongs = [], limit = 24) => {
   return shuffleBySeed(basePool).slice(0, limit)
 }
 
+const getDiscoveryPool = (...songLists) => {
+  const songsById = new Map()
+
+  songLists.flat().forEach((song) => {
+    if (!song?.id || !song?.audio || !song?.image) return
+    songsById.set(String(song.id), song)
+  })
+
+  return [...songsById.values()]
+}
+
 const fixedArtistNames = [
   'KK',
   'Arijit Singh',
@@ -122,7 +133,13 @@ export default function Home() {
   const { songs: quickPickSongs, loading: quickLoading, error: quickError } = useFetchQuickPicks(listenHistory)
   const { songs: newReleaseSongs, loading: releaseLoading, error: releaseError } = useFetchNewReleases(listenHistory)
   const { songs: longSongs, loading: longLoading, error: longError } = useFetchLongSongs(listenHistory)
-  const librarySongs = useMemo(() => getSuggestedLibrarySongs(songs, 24), [songs])
+  const discoverySongs = useMemo(() => getDiscoveryPool(
+    quickPickSongs,
+    songs,
+    newReleaseSongs,
+    longSongs
+  ), [longSongs, newReleaseSongs, quickPickSongs, songs])
+  const librarySongs = useMemo(() => getSuggestedLibrarySongs(discoverySongs, 24), [discoverySongs])
   const hollywoodSongs = useMemo(() => {
     const pool = [...(songs || []), ...(newReleaseSongs || []), ...(quickPickSongs || [])]
     return getHollywoodSongs(pool, 24)
