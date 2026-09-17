@@ -21,6 +21,43 @@ const normalizeSong = (song = {}) => ({
   duration: Number(song.duration || song.more_info?.duration || 0) || 0,
 })
 
+const normalizeText = (value = '') => String(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+const artistParts = (value = '') => normalizeText(value).split(' ').filter((part) => part.length > 2)
+
+const rankRelatedSongs = (songs, currentTrack, isHollywood) => {
+  const currentTitle = normalizeText(currentTrack.title)
+  const currentArtist = normalizeText(currentTrack.artist)
+  const currentArtistParts = artistParts(currentTrack.artist)
+  const ranked = songs
+    .map((song) => {
+      const title = normalizeText(song.title)
+      const artist = normalizeText(song.artist)
+      const sameTitle = title === currentTitle || title.includes(currentTitle) || currentTitle.includes(title)
+      const sharesArtist = currentArtistParts.some((part) => artist.includes(part)) || artist.includes(currentArtist)
+      if (sameTitle && !sharesArtist) return null
+
+      let score = 0
+      if (sharesArtist) score += 100
+      if (sameTitle) score += 30
+      if (isLikelyHollywoodSong(song) === isHollywood) score += 20
+      if (title.includes(currentTitle) || currentTitle.includes(title)) score += 10
+      return { song, score }
+    })
+    .filter(Boolean)
+    .sort((first, second) => second.score - first.score)
+
+  const seenTitles = new Set()
+  const seenIds = new Set([String(currentTrack.id)])
+  return ranked.filter(({ song }) => {
+    const titleKey = normalizeText(song.title)
+    const idKey = String(song.id)
+    if (seenIds.has(idKey) || seenTitles.has(titleKey)) return false
+    seenIds.add(idKey)
+    seenTitles.add(titleKey)
+    return true
+  }).map(({ song }) => song)
+}
+
 export default function KeepListening() {
   const { currentTrack, queue, listenHistory, isPlaying, isRecommendationQueue, playTrack, setPlaybackQueue, togglePlay } = usePlayer()
   const [activeTab, setActiveTab] = useState('UP NEXT')
@@ -90,18 +127,18 @@ export default function KeepListening() {
       try {
         const historyIds = new Set(listenHistory.map((song) => String(song.id)))
         const isHollywood = isLikelyHollywoodSong(currentTrack)
-        const searchQueries = [currentTrack.title, `${currentTrack.title} ${currentTrack.artist || ''}`.trim()]
+        const artist = String(currentTrack.artist || '').split(',')[0].trim()
+        const searchQueries = [
+          `${artist} songs`.trim(),
+          `${artist} latest songs`.trim(),
+          currentTrack.title,
+          `${currentTrack.title} ${artist}`.trim()
+        ].filter(Boolean)
         const searchResults = await Promise.all(
-          searchQueries.flatMap((query) => [0, 1, 2, 3].map((page) => searchSongs(query, 10, page).catch(() => [])))
+          searchQueries.flatMap((query) => [0, 1].map((page) => searchSongs(query, 10, page).catch(() => [])))
         )
-        const candidates = searchResults.flat().map(normalizeSong)
-        const seen = new Set([String(currentTrack.id), ...historyIds])
-        const suggestions = candidates.filter((song) => {
-          const key = String(song.id)
-          if (seen.has(key) || isLikelyHollywoodSong(song) !== isHollywood) return false
-          seen.add(key)
-          return true
-        })
+        const candidates = searchResults.flat().map(normalizeSong).filter((song) => !historyIds.has(String(song.id)))
+        const suggestions = rankRelatedSongs(candidates, currentTrack, isHollywood)
         const expanded = [currentTrack, ...suggestions].slice(0, 40)
         if (!controller.signal.aborted) setPlaybackQueue(expanded)
       } catch {

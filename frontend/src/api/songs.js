@@ -24,6 +24,19 @@ const normalizeLanguage = (value) => {
 
 const normalizeText = (value = '') => String(value).trim().toLowerCase()
 
+const canonicalHollywoodArtists = {
+  'on my way': 'alan walker',
+  'bad guy': 'billie eilish',
+  'night changes': 'one direction',
+  'as it was': 'harry styles',
+  'shape of you': 'ed sheeran',
+  'perfect': 'ed sheeran',
+  'levitating': 'dua lipa',
+  'attention': 'charlie puth',
+  'closer': 'the chainsmokers',
+  'someone like you': 'adele'
+}
+
 const englishArtistHints = [
   'justin bieber', 'charlie puth', 'the chainsmokers', 'sia', 'demi lovato', 'selena gomez', 'ed sheeran',
   'rihanna', 'katy perry', 'halsey', 'jessie j', 'ellie goulding', 'post malone', 'maroon 5', 'zayn',
@@ -152,16 +165,18 @@ export const getHollywoodSongs = (songs = [], limit = 24) => {
     .filter((song) => song?.image && song?.title && song?.artist)
 
   const realSongs = normalizedPool.filter((song) => isLikelyHollywoodSong(song))
-  const dedupedRealSongs = []
-  const seen = new Set()
+  const bestByTitle = new Map()
 
   for (const song of realSongs) {
-    const key = `${song.id}-${song.title}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    dedupedRealSongs.push(song)
-    if (dedupedRealSongs.length >= limit) break
+    const titleKey = normalizeText(song.title).replace(/[^a-z0-9]+/g, ' ').trim()
+    const artistKey = normalizeText(song.artist)
+    const canonicalArtist = canonicalHollywoodArtists[titleKey]
+    const score = canonicalArtist && artistKey.includes(canonicalArtist) ? 100 : (song.audio ? 10 : 0)
+    const current = bestByTitle.get(titleKey)
+    if (!current || score > current.score) bestByTitle.set(titleKey, { song, score })
   }
+
+  const dedupedRealSongs = [...bestByTitle.values()].map(({ song }) => song).slice(0, limit)
 
   const fallback = []
   const fallbackSeen = new Set()
