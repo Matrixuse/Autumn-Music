@@ -53,20 +53,6 @@ const numericValue = (item, keys) => {
   return parsed || 0
 }
 
-const imageScore = (item) => {
-  const quality = item?.quality || item?.resolution || item?.size || item?.label || ''
-  const widthMatch = String(quality).match(/(\d+)x(\d+)/)
-  if (widthMatch) {
-    const width = Number(widthMatch[1])
-    const height = Number(widthMatch[2])
-    if (width && height) return width * height
-  }
-
-  const width = numericValue(item, ['width', 'resolution', 'size', 'quality'])
-  const height = numericValue(item, ['height']) || width
-  return width * height || width
-}
-
 /** Returns the highest bitrate URL from a string, keyed object, or variant array. */
 export const getBestAudioUrl = (audioField) => entriesFrom(audioField)
   .map((item) => ({
@@ -81,10 +67,6 @@ export const getBestImageUrl = (imageField) => {
   const candidates = collectImageCandidates(imageField)
 
   if (!candidates.length) return null
-
-  const upgradedCandidates = candidates.map((url) => url.replace(/(?:50x50|150x150)/g, '500x500'))
-  const highestQuality = upgradedCandidates.find((url) => /(?:^|[-_\/])500x500(?:[-_.\/]|$)/i.test(url))
-  if (highestQuality) return highestQuality
 
   const scored = candidates
     .map((url) => {

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import * as authApi from '../api/auth'
 
 const AuthContext = createContext(null)
@@ -12,27 +12,6 @@ export const AuthProvider = ({ children }) => {
         return null 
     } 
   })
-
-  useEffect(() => {
-    if (!user) return undefined
-
-    let cancelled = false
-    const refreshSession = async () => {
-      try {
-        const response = await authApi.getUser()
-        if (!cancelled && response?.data) localStorage.setItem('autumn_user', JSON.stringify(response.data))
-      } catch {
-        // Keep the local session during temporary API outages.
-      }
-    }
-
-    refreshSession()
-    const interval = window.setInterval(refreshSession, 12 * 60 * 60 * 1000)
-    return () => {
-      cancelled = true
-      window.clearInterval(interval)
-    }
-  }, [user])
 
   const login = async (credentials) => {
     const response = await authApi.login(credentials)

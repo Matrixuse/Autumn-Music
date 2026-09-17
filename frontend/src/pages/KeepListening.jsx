@@ -44,15 +44,11 @@ export default function KeepListening() {
       try {
         const artistQuery = String(currentTrack.artist || '').split(',')[0].trim() || currentTrack.title
         const playlistQuery = `${currentTrack.title || ''} ${artistQuery} playlist`.trim()
-        const [relatedResponse, lyricsResponse, artistsResponse, playlistsResponse] = await Promise.allSettled([
-          axiosInstance.get(`/songs/${currentTrack.id}/suggestions`, { params: { limit: 24 }, signal: controller.signal }),
+        const [lyricsResponse, artistsResponse, playlistsResponse] = await Promise.allSettled([
           axiosInstance.get(`/songs/${currentTrack.id}/lyrics`, { signal: controller.signal }),
           axiosInstance.get('/search/artists', { params: { query: artistQuery, page: 0, limit: 6 }, signal: controller.signal }),
           searchPlaylists(playlistQuery, 5, 0)
         ])
-        const songs = relatedResponse.status === 'fulfilled' && Array.isArray(relatedResponse.value.data?.data)
-          ? relatedResponse.value.data.data.map(normalizeSong).slice(0, 24)
-          : []
         const nextLyrics = lyricsResponse.status === 'fulfilled' ? String(lyricsResponse.value.data?.data?.lyrics || '') : ''
         const artists = artistsResponse.status === 'fulfilled'
           ? (artistsResponse.value.data?.data?.results || []).slice(0, 6).map((artist) => ({
@@ -63,7 +59,7 @@ export default function KeepListening() {
           : []
         const playlists = playlistsResponse.status === 'fulfilled' ? playlistsResponse.value.slice(0, 5) : []
         if (!controller.signal.aborted) {
-          setRelatedSongs(songs)
+          setRelatedSongs([])
           setLyrics(nextLyrics)
           setRelatedArtists(artists)
           setRelatedPlaylists(playlists)
@@ -92,23 +88,13 @@ export default function KeepListening() {
     const controller = new AbortController()
     const fillQueue = async () => {
       try {
-        const response = await axiosInstance.get(`/songs/${currentTrack.id}/suggestions`, {
-          params: { limit: 40 },
-          signal: controller.signal,
-        })
         const historyIds = new Set(listenHistory.map((song) => String(song.id)))
         const isHollywood = isLikelyHollywoodSong(currentTrack)
-        const stationSuggestions = Array.isArray(response.data?.data)
-          ? response.data.data.map(normalizeSong).filter((song) => {
-            if (String(song.id) === String(currentTrack.id) || historyIds.has(String(song.id))) return false
-            return isLikelyHollywoodSong(song) === isHollywood
-          })
-          : []
         const searchQueries = [currentTrack.title, `${currentTrack.title} ${currentTrack.artist || ''}`.trim()]
         const searchResults = await Promise.all(
           searchQueries.flatMap((query) => [0, 1, 2, 3].map((page) => searchSongs(query, 10, page).catch(() => [])))
         )
-        const candidates = [...stationSuggestions, ...searchResults.flat().map(normalizeSong)]
+        const candidates = searchResults.flat().map(normalizeSong)
         const seen = new Set([String(currentTrack.id), ...historyIds])
         const suggestions = candidates.filter((song) => {
           const key = String(song.id)
