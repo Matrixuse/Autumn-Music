@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import axiosInstance from '../api/axiosInstance'
 import { getBestImageUrl } from '../utils/mediaQuality'
 import SongCard from '../components/cards/SongCard'
+import Loader from '../components/common/Loader'
 
 const normalizeSong = (song = {}) => ({
   id: song.id || song._id || `${song.name || song.title || 'song'}-${Math.random().toString(36).slice(2, 8)}`,
@@ -74,11 +75,8 @@ export default function PlaylistDetail() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center p-8 text-center text-white">
-        <div className="max-w-md rounded-2xl border border-gray-700 bg-[#0f0f0f]/80 p-8 shadow-xl">
-          <p className="text-lg font-semibold">Loading your playlist...</p>
-          <p className="mt-2 text-sm text-gray-400">Please wait while we fetch the tracks.</p>
-        </div>
+      <div className="grid min-h-[50vh] place-items-center p-8 text-white">
+        <Loader label="Loading playlist" />
       </div>
     )
   }

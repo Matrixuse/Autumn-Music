@@ -8,6 +8,8 @@ import { getReleaseAlbums } from '../api/albums';
 import { getMoodQuickPicksSongs } from '../api/songs';
 import { usePlayer } from '../context/PlayerContext';
 import { getBestAudioUrl, getBestImageUrl } from '../utils/mediaQuality';
+import SongActionsMenu from '../components/common/SongActionsMenu';
+import Loader from '../components/common/Loader';
 
 const normalizeSong = (song = {}) => ({
   id: song.id || song._id || `${song.name || song.title || 'song'}-${Math.random().toString(36).slice(2, 8)}`,
@@ -145,11 +147,8 @@ export default function AlbumsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center p-8 text-center text-white">
-        <div className="max-w-md rounded-2xl border border-gray-700 bg-[#0f0f0f]/80 p-8 shadow-xl">
-          <p className="text-lg font-semibold">Loading your music album...</p>
-          <p className="mt-2 text-sm text-gray-400">Please wait while we fetch your songs.</p>
-        </div>
+      <div className="grid min-h-[50vh] place-items-center p-8 text-white">
+        <Loader label="Loading album" />
       </div>
     );
   }
@@ -244,7 +243,7 @@ export default function AlbumsPage() {
                       <h4 className="truncate text-sm font-semibold text-white">{song.title}</h4>
                       <p className="truncate text-xs text-gray-400">{song.artist}</p>
                     </div>
-                    <div className="absolute right-1 top-1/2 -translate-y-1/2 shrink-0 text-xs text-gray-300">{formatDuration(song)}</div>
+                    <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-2"><span className="text-xs text-gray-300">{formatDuration(song)}</span><SongActionsMenu song={song} queue={songs} /></div>
                   </div>
                 </div>
               )) : (
@@ -276,16 +275,12 @@ export default function AlbumsPage() {
               <h2 className="text-4xl font-bold leading-none tracking-tight text-white">{albumName}</h2>
               <div className="mt-6 flex items-center justify-center gap-5 md:gap-6">
                 <button className="rounded-full p-2 text-white transition-colors hover:bg-[#282828]" aria-label="Play album">
-                  <Play size={20} className="fill-white text-white" />
+                  <Shuffle size={20} className="fill-white text-white" />
                 </button>
                 <button className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 shadow-sm shadow-red-500/40 transition-all hover:bg-blue-500 md:h-16 md:w-16" aria-label="Play album">
                   <Play className="ml-1 h-7 w-7 fill-white text-white md:h-8 md:w-8" />
                 </button>
-                <div className="relative">
-                  <button className="rounded-full bg-[#1f1f1f] p-2 text-white transition-colors hover:bg-[#282828]" aria-label="Album actions">
-                    <MoreVertical size={20} />
-                  </button>
-                </div>
+                <SongActionsMenu song={{ id: albumId, name: albumName }} itemType="album" items={songs} alwaysVisible />
               </div>
             </div>
           </div>
@@ -327,6 +322,7 @@ export default function AlbumsPage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       <span className="mr-1 text-xs text-gray-300 md:text-sm">{formatDuration(song)}</span>
+                      <SongActionsMenu song={song} queue={songs} />
                     </div>
                   </div>
                 </div>

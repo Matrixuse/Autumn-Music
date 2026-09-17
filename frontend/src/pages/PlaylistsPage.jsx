@@ -6,6 +6,8 @@ import PlaylistCard from '../components/cards/PlaylistCard';
 import { searchPlaylists } from '../api/playlists';
 import { usePlayer } from '../context/PlayerContext';
 import { getBestAudioUrl, getBestImageUrl } from '../utils/mediaQuality';
+import SongActionsMenu from '../components/common/SongActionsMenu';
+import Loader from '../components/common/Loader';
 
 const ImageWithFallback = ({ src, alt, className, fallback }) => (
   <img src={src || fallback} alt={alt} className={className} onError={(event) => { event.currentTarget.src = fallback; }} />
@@ -75,7 +77,7 @@ function RelatedPlaylistsRail({ playlists, onWheel }) {
 
 export default function PlaylistPage({ libraryOption = '' }) {
   const navigate = useNavigate();
-  const { currentTrack, isPlaying, playTrack } = usePlayer();
+  const { currentTrack, isPlaying, playTrack, userPlaylists } = usePlayer();
   const { playlistId: encodedPlaylistId, playlistName: encodedPlaylistName } = useParams();
   const [playlistTitle, setPlaylistTitle] = useState('Playlist');
   const playlistRouteName = React.useMemo(() => {
@@ -105,6 +107,31 @@ export default function PlaylistPage({ libraryOption = '' }) {
     const loadPlaylist = async () => {
       try {
         setIsLoadingSongs(true);
+        setLoadError('');
+
+        const localPlaylist = userPlaylists.find((item) => String(item.id) === String(encodedPlaylistId));
+        if (localPlaylist) {
+          const normalizedLocalSongs = (localPlaylist.songs || []).map((song) => ({
+            id: song.id,
+            title: song.name || song.title || 'Unknown Track',
+            artist: Array.isArray(song.artists?.all || song.artists?.primary)
+              ? (song.artists.all || song.artists.primary).map((artist) => artist?.name || artist?.title).filter(Boolean).join(', ')
+              : song.artist || song.subtitle || 'Unknown Artist',
+            image: getBestImageUrl(song.image || song.cover || song.thumbnail || []),
+            audio: getBestAudioUrl(song.downloadUrl || song.audio),
+            duration: Number(song.duration || song.more_info?.duration || 0) || 0,
+            raw: song,
+          }));
+
+          if (!controller.signal.aborted) {
+            setPlaylist(localPlaylist);
+            setPlaylistTitle(localPlaylist.name || playlistRouteName || 'Playlist');
+            setSongs(normalizedLocalSongs);
+            setRelatedPlaylists([]);
+          }
+          return;
+        }
+
         const response = await axiosInstance.get('/playlists', { params: { id: encodedPlaylistId, limit: 1000 }, signal: controller.signal });
         const data = response.data?.data;
         const normalized = (data?.songs || []).map((song) => ({
@@ -161,7 +188,7 @@ export default function PlaylistPage({ libraryOption = '' }) {
     };
     loadPlaylist();
     return () => controller.abort();
-  }, [encodedPlaylistId, playlistRouteName]);
+  }, [encodedPlaylistId, playlistRouteName, userPlaylists]);
 
   const displayName = playlist?.name || playlistTitle || 'Playlist';
   const displayImage = getPlaylistCoverUrl(playlist) || songs[0]?.image || 'https://placehold.co/400x400/1F2937/FFFFFF?text=Music';
@@ -258,11 +285,8 @@ export default function PlaylistPage({ libraryOption = '' }) {
 
   if (isLoadingSongs && !hasSongData) {
     return (
-      <div className="flex h-full min-h-[50vh] items-center justify-center p-8 text-center text-white">
-        <div className="max-w-md rounded-2xl border border-gray-700 bg-[#0f0f0f]/80 p-8 shadow-xl">
-          <p className="text-lg font-semibold">Loading your music library...</p>
-          <p className="mt-2 text-sm text-gray-400">Please wait while we fetch your songs.</p>
-        </div>
+      <div className="grid h-full min-h-[50vh] place-items-center p-8 text-white">
+        <Loader label="Loading playlist songs" />
       </div>
     );
   }
@@ -271,7 +295,7 @@ export default function PlaylistPage({ libraryOption = '' }) {
     return (
       <div className="flex h-full min-h-[50vh] items-center justify-center p-8 text-center text-white">
         <div className="max-w-md rounded-2xl border border-gray-700 bg-[#0f0f0f]/80 p-8 shadow-xl">
-          <p className="text-lg font-semibold">No songs available for this vibe yet.</p>
+          <p className="text-lg font-semibold">No songs available yet.</p>
           <p className="mt-2 text-sm text-gray-400">{loadError || 'This playlist has no matching tracks.'}</p>
         </div>
       </div>
@@ -609,9 +633,7 @@ export default function PlaylistPage({ libraryOption = '' }) {
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <span className="text-xs text-gray-300 md:text-sm mr-1">{formatDuration(song)}</span>
-                          <div className="relative z-50 md:opacity-100 md:group-hover:opacity-100 md:transition-opacity">
-                            <MoreVertical size={16} className="text-white/50" />
-                          </div>
+                          <SongActionsMenu song={song} queue={songs} />
                         </div>
                       </div>
                     </div>

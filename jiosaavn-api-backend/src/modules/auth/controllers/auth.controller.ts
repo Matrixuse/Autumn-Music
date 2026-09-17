@@ -6,12 +6,13 @@ import { UserModel } from '#modules/auth/models'
 import { AuthError, AuthService } from '#modules/auth/services'
 
 const SESSION_COOKIE = 'jiosaavn_session'
+const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 10
 const sessionCookieOptions = {
   httpOnly: true,
   sameSite: 'Lax' as const,
   secure: process.env.NODE_ENV === 'production',
   path: '/',
-  maxAge: 60 * 60 * 24 * 60
+  maxAge: SESSION_COOKIE_MAX_AGE
 }
 
 const credentialsSchema = z.object({
@@ -135,6 +136,8 @@ export class AuthController implements Routes {
       }),
       async (ctx) => {
         const user = await this.authService.getUserBySession(getCookie(ctx, SESSION_COOKIE))
+        const token = getCookie(ctx, SESSION_COOKIE)
+        if (token) setCookie(ctx, SESSION_COOKIE, token, sessionCookieOptions)
         return ctx.json({ success: true as const, data: user }, 200)
       }
     )

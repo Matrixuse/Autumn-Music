@@ -1,10 +1,10 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import * as authApi from '../api/auth'
 
 const AuthContext = createContext(null)
 
 export const AuthProvider = ({ children }) => {
-  const [loading, setLoading] = useState(true)
+  const [loading] = useState(false)
   const [user, setUser] = useState(() => { 
     try { 
         return JSON.parse(localStorage.getItem('autumn_user')) || null 
@@ -12,16 +12,6 @@ export const AuthProvider = ({ children }) => {
         return null 
     } 
   })
-  useEffect(() => {
-    authApi.getUser().then((response) => {
-      const nextUser = response?.data || null
-      if (nextUser) localStorage.setItem('autumn_user', JSON.stringify(nextUser))
-      setUser(nextUser)
-    }).catch(() => {
-      localStorage.removeItem('autumn_user')
-      setUser(null)
-    }).finally(() => setLoading(false))
-  }, [])
 
   const login = async (credentials) => {
     const response = await authApi.login(credentials)
@@ -53,8 +43,14 @@ export const AuthProvider = ({ children }) => {
       setUser(null)
     }
   }
+  const updateProfile = (updates) => {
+    const nextUser = { ...user, ...updates }
+    localStorage.setItem('autumn_user', JSON.stringify(nextUser))
+    setUser(nextUser)
+    return nextUser
+  }
   return (
-    <AuthContext.Provider value={{ user, loading, isAuthenticated: Boolean(user), login, loginWithGoogle, signup, logout }}>
+    <AuthContext.Provider value={{ user, loading, isAuthenticated: Boolean(user), login, loginWithGoogle, signup, logout, updateProfile }}>
         {children}
     </AuthContext.Provider>
   )

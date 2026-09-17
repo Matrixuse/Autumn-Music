@@ -355,7 +355,19 @@ export const getMoodQuickPicksSongs = async (mood, limit = 24) => {
     .sort((first, second) => second.score - first.score)
     .map(({ song }) => song)
 
-  return shuffleBySeed(ranked).slice(0, safeLimit)
+  const moodSongs = shuffleBySeed(ranked).slice(0, safeLimit)
+  if (moodSongs.length >= safeLimit) return moodSongs
+
+  const seen = new Set(moodSongs.map((song) => String(song.id)))
+  const fallbackSongs = await getSongs(recentGlobalQueries, safeLimit)
+  const backfill = shuffleBySeed(fallbackSongs).filter((song) => {
+    const key = String(song?.id)
+    if (!song?.audio || !song?.image || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
+  return [...moodSongs, ...backfill].slice(0, safeLimit)
 }
 
 export const getSongs = async (queries = recentGlobalQueries, limit = 5) => {

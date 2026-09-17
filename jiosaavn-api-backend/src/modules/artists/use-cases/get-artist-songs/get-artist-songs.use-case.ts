@@ -57,25 +57,25 @@ export class GetArtistSongsUseCase implements IUseCase<GetArtistSongsArgs, z.inf
       let currentPage = 0
       const pageSize = 10
 
-      while (currentPage === 0 || songs.size < total) {
-      const { data } = await useFetch<z.infer<typeof ArtistSongAPIResponseModel>>({
-        endpoint: Endpoints.artists.songs,
-        params: {
-          artistId,
-          page: currentPage,
-          n_song: pageSize,
-          sort_order: sortOrder,
-          category: sortBy
-        }
-      })
+      while (currentPage === 0 || (songs.size < limit && songs.size < total)) {
+        const { data } = await useFetch<z.infer<typeof ArtistSongAPIResponseModel>>({
+          endpoint: Endpoints.artists.songs,
+          params: {
+            artistId,
+            page: currentPage,
+            n_song: Math.min(pageSize, limit),
+            sort_order: sortOrder,
+            category: sortBy
+          }
+        })
 
-      if (!data) break
+        if (!data) break
 
-      total = data.topSongs.total
-      data.topSongs.songs.forEach((song) => songs.set(song.id, song))
+        total = data.topSongs.total
+        data.topSongs.songs.forEach((song) => songs.set(song.id, song))
 
-      if (!data.topSongs.songs.length) break
-      currentPage += 1
+        if (!data.topSongs.songs.length) break
+        currentPage += 1
       }
 
       catalog = { total, songs: [...songs.values()] }

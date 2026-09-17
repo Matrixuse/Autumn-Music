@@ -1,449 +1,90 @@
-// import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
-// import { useParams, Link, useOutletContext, useNavigate } from 'react-router-dom';
-// import { ArrowLeft, Play, Pause, Shuffle, Search, X, MoreVertical, Bookmark, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react'
+import { ArrowLeft, Heart, Play, Search, Shuffle, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { usePlayer } from '../context/PlayerContext'
+import { formatTime } from '../utils/formatTime'
+import SongActionsMenu from '../components/common/SongActionsMenu'
 
+export default function LikedSongPage() {
+  const navigate = useNavigate()
+  const { likedSongs, currentTrack, playTrack } = usePlayer()
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
-// export default function LikePage ({ libraryOption = '' }) {
-//   const navigate = useNavigate();
+  const filteredSongs = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) return likedSongs
+    return likedSongs.filter((song) => `${song.title} ${song.artist}`.toLowerCase().includes(term))
+  }, [likedSongs, searchTerm])
 
-//   const [searchOpen, setSearchOpen] = useState(false);
-//   const [searchTerm, setSearchTerm] = useState('');
-//   const searchInputRef = useRef(null);
-//   const mobileScrollContainerRef = useRef(null);
-//   const desktopScrollContainerRef = useRef(null);
-//   const [isHeaderExpanded, setIsHeaderExpanded] = useState(true);
-//   const [isSaved, setIsSaved] = useState(false);
+  const playAll = () => {
+    if (likedSongs.length) playTrack(likedSongs[0], likedSongs)
+  }
 
-//   const toggleSearch = useCallback(() => {
-//     setSearchOpen(v => {
-//       const next = !v;
-//       if (!next) setSearchTerm('');
-//       return next;
-//     });
-//   }, []);
+  const shuffleAll = () => {
+    if (!likedSongs.length) return
+    const shuffled = [...likedSongs].sort(() => Math.random() - 0.5)
+    playTrack(shuffled[0], shuffled)
+  }
 
-//   const formatDuration = useCallback((song) => {
-//     if (!song) return '0:00';
-//     const raw = song.duration ?? song.length ?? song.durationSeconds ?? song.totalTime ?? 0;
-//     const totalSeconds = Number(raw);
-//     if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return '0:00';
-//     const minutes = Math.floor(totalSeconds / 60);
-//     const seconds = Math.floor(totalSeconds % 60);
-//     return `${minutes}:${String(seconds).padStart(2, '0')}`;
-//   }, []);
+  return (
+    <div className="min-h-[60vh] text-white flex gap-3">
+      <div className="w-2/6 rounded-xl p-5 shadow-xl md:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <button type="button" onClick={() => navigate(-1)} aria-label="Go back" className="rounded-full bg-white/6 p-2 hover:bg-white/12"><ArrowLeft size={20} /></button>
+          <button type="button" onClick={() => setSearchOpen((open) => !open)} aria-label={searchOpen ? 'Close search' : 'Search liked songs'} className="rounded-full bg-white/6 p-2 hover:bg-white/12">{searchOpen ? <X size={20} /> : <Search size={20} />}</button>
+        </div>
+        <div className="mt-3 flex flex-col items-center">
+            <img src="/likedsong.png" alt="Liked songs" className="mt-5 aspect-square w-60 h-60 rounded-xl object-cover" />
+        </div>
+        <div className="min-w-0 flex flex-col items-center">
+            <p className="text-xs font-bold uppercase tracking-[.2em] text-[#8e8787]">Favourite collection</p>
+            <h1 className="truncate font-['Space_Grotesk'] text-3xl font-bold">Liked music</h1>
+            <p className="mt-1 text-sm text-white/45">{likedSongs.length} {likedSongs.length === 1 ? 'Liked Songs' : 'Liked Song'}</p>
+        </div>
+        <div className="mt-6 flex justify-center items-center gap-3">
+          <button type="button" onClick={playAll} disabled={!likedSongs.length} className="flex items-center gap-2 rounded-full bg-[#f5f1f1] px-5 py-3 text-sm font-bold text-[#21160a] disabled:cursor-not-allowed disabled:opacity-40"><Play size={17} fill="currentColor" />Play all</button>
+          <button type="button" onClick={shuffleAll} disabled={!likedSongs.length} aria-label="Shuffle liked songs" className="rounded-full border border-white/10 bg-white/6 p-3 disabled:cursor-not-allowed disabled:opacity-40"><Shuffle size={18} /></button>
+        </div>
+      </div>
 
-//   useEffect(() => {
-//     if (searchOpen && searchInputRef.current) {
-//       try { searchInputRef.current.focus(); } catch (error) {}
-//     }
-//   }, [searchOpen]);
-
-//   useEffect(() => {
-//     const updateHeaderState = () => {
-//       const containers = [mobileScrollContainerRef.current, desktopScrollContainerRef.current].filter(Boolean);
-//       if (containers.length === 0) return;
-
-//       const maxScrollTop = containers.reduce((max, container) => Math.max(max, container.scrollTop || 0), 0);
-//       setIsHeaderExpanded(maxScrollTop < 50);
-//     };
-
-//     const containers = [mobileScrollContainerRef.current, desktopScrollContainerRef.current].filter(Boolean);
-//     containers.forEach((container) => {
-//       container.addEventListener('scroll', updateHeaderState);
-//     });
-
-//     updateHeaderState();
-
-//     return () => {
-//       containers.forEach((container) => {
-//         container.removeEventListener('scroll', updateHeaderState);
-//       });
-//     };
-//   }, []);
-
-//   const hasSongData = Array.isArray(allSongs) && allSongs.length > 0;
-
-//   if (!LikeSong) {
-//     return <div className="p-8 text-center text-white">Vibe not found.</div>;
-//   }
-
-//   if (isLoadingSongs && !hasSongData) {
-//     return (
-//       <div className="flex h-full min-h-[50vh] items-center justify-center p-8 text-center text-white">
-//         <div className="max-w-md rounded-2xl border border-gray-700 bg-[#0f0f0f]/80 p-8 shadow-xl">
-//           <p className="text-lg font-semibold">Loading your liked music...</p>
-//           <p className="mt-2 text-sm text-gray-400">Please wait while we fetch your songs.</p>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   if (!hasSongData) {
-//     return (
-//       <div className="flex h-full min-h-[50vh] items-center justify-center p-8 text-center text-white">
-//         <div className="max-w-md rounded-2xl border border-gray-700 bg-[#0f0f0f]/80 p-8 shadow-xl">
-//           <p className="text-lg font-semibold">No liked songs available.</p>
-//           <p className="mt-2 text-sm text-gray-400">Your music library is still loading.</p>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <>
-//       <div className="flex flex-col min-h-0 min-w-0 md:hidden">
-//         <div className="flex-grow flex flex-col min-h-0 min-w-0">
-//           <div className={`flex-shrink-0 transition-all duration-300 ${isHeaderExpanded ? 'bg-[#0f0f0f]/80 p-6' : 'bg-[#0f0f0f]/80 p-3'}`}>
-//             <div className="flex items-center gap-3 mb-0">
-//               <Link to="/" className="p-2 rounded-full bg-[#0f0f0f] hover:bg-[#282828] flex-shrink-0">
-//                 <ArrowLeft size={20} />
-//               </Link>
-//               {isHeaderExpanded ? (
-//                 <h1 className="flex-1"></h1>
-//               ) : (
-//                 <h1 className="text-xl font-bold flex-1">{likeSong}</h1>
-//               )}
-//               <div className="flex items-center gap-2">
-//                 {dailySongs.length > 0 && (
-//                   <button onClick={toggleSearch} className="p-2 rounded-full bg-[#0f0f0f] hover:bg-[#282828] flex-shrink-0">
-//                     {searchOpen ? <X size={18} /> : <Search size={18} />}
-//                   </button>
-//                 )}
-//                 {dailySongs.length > 0 && (
-//                   <button
-//                     onClick={handleToggleShuffle}
-//                     className={`p-2 rounded-full transition-all flex-shrink-0 ${
-//                       isVibeShuffleMode ? 'bg-blue-900 shadow-lg shadow-red-500/50 animate-pulse' : 'bg-[#0f0f0f] hover:bg-[#5f5f5f]'
-//                     }`}
-//                     title={isVibeShuffleMode ? 'Shuffle is on - songs will play randomly' : 'Shuffle is off - click to turn on'}
-//                   >
-//                     <Shuffle size={20} className="text-white" />
-//                   </button>
-//                 )}
-//               </div>
-//             </div>
-
-//             {isHeaderExpanded && dailySongs.length > 0 && (
-//               <div className="mt-4 flex items-center">
-//                 <ImageWithFallback
-//                   src={getVibeImageUrl(vibeName)}
-//                   alt={vibeName}
-//                   className="w-24 h-22 rounded-lg object-cover shadow-lg"
-//                   fallback={'https://placehold.co/400x400/1F2937/FFFFFF?text=Music'}
-//                 />
-//                 <div className="w-full mt-3">
-//                   <h2 className="text-2xl font-bold ml-5 leading-none tracking-tight text-white">{vibeName}</h2>
-//                   <div className="mt-3 ml-5 flex items-center justify-start gap-5 md:gap-6">
-//                     <button
-//                       onClick={() => {
-//                         if (dailySongs.length > 0) {
-//                           handleSelectSong(dailySongs[0].id);
-//                         }
-//                       }}
-//                       className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 shadow-sm shadow-red-500/40 transition-all hover:bg-blue-500"
-//                       aria-label={isPlaying ? 'Pause vibe playback' : 'Play vibe'}
-//                     >
-//                       {isPlaying ? <Pause className="h-5 w-5 fill-white text-white" /> : <Play className="ml-1 h-5 w-5 fill-white text-white" />}
-//                     </button>
-//                     <div className="relative">
-//                       <button
-//                         onClick={() => setVibeMenuOpen(!vibeMenuOpen)}
-//                         className="rounded-full bg-[#1f1f1f] p-2 text-white transition-colors hover:bg-[#282828]"
-//                         aria-label="Vibe actions"
-//                       >
-//                         <MoreVertical size={20} />
-//                       </button>
-//                       {vibeMenuOpen && (
-//                         <div className="absolute right-0 bottom-full mb-2 w-40 bg-[#1f1f1f] rounded-lg shadow-lg z-20">
-//                           <button
-//                             onClick={() => {
-//                               handleToggleShuffle();
-//                               setVibeMenuOpen(false);
-//                             }}
-//                             className="w-full text-left px-4 py-2 hover:bg-[#282828] rounded-t-lg flex items-center gap-2 text-white transition-colors"
-//                           >
-//                             <Shuffle size={16} />
-//                             <span>Shuffle</span>
-//                           </button>
-//                           <button
-//                             onClick={async () => {
-//                               await handleSaveVibeAsPlaylist();
-//                             }}
-//                             className="w-full text-left px-4 py-2 hover:bg-[#282828] flex items-center gap-2 text-white transition-colors"
-//                           >
-//                             <Bookmark size={16} className={isSaved ? 'fill-current text-red-400' : ''} />
-//                             <span>{isSaved ? 'Already Saved' : 'Save'}</span>
-//                           </button>
-//                           <button
-//                             onClick={() => {
-//                               if (onAddToQueue && dailySongs.length > 0) {
-//                                 onAddToQueue(dailySongs);
-//                               }
-//                               setVibeMenuOpen(false);
-//                             }}
-//                             className="w-full text-left px-4 py-2 hover:bg-[#282828] rounded-b-lg flex items-center gap-2 text-white transition-colors"
-//                           >
-//                             <Plus size={16} />
-//                             <span>Add to Queue</span>
-//                           </button>
-//                         </div>
-//                       )}
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-//             )}
-//           </div>
-
-//           {searchOpen && (
-//             <div className="flex-shrink-0 bg-[#0f0f0f]/80 px-4 pb-4">
-//               <div className="relative">
-//                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-//                 <input
-//                   ref={searchInputRef}
-//                   type="text"
-//                   placeholder={`Search within ${vibeName} vibe...`}
-//                   value={searchTerm}
-//                   onChange={(e) => setSearchTerm(e.target.value)}
-//                   className="w-full bg-[#1f1f1f]/40 text-white rounded-full py-2 pl-10 pr-3 text-sm focus:outline-none focus:bg-[#1f1f1f]"
-//                   autoComplete="off"
-//                 />
-//                 {searchTerm && (
-//                   <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
-//                     <X size={16} />
-//                   </button>
-//                 )}
-//               </div>
-//             </div>
-//           )}
-
-//           <hr className="h-px bg-[#5f5f5f]" />
-//           <div ref={mobileScrollContainerRef} className="flex-grow overflow-y-auto custom-scrollbar p-4 pb-24">
-//           {filteredSongs.length > 0 ? (
-//             <div className="grid grid-cols-1 gap-2">
-//               {filteredSongs.map((song) => {
-//                 const isActive = currentSongId === song.id && isPlaying;
-//                 return (
-//                   <div
-//                     key={song.id}
-//                     role="button"
-//                     tabIndex={0}
-//                     onClick={() => handleSelectSong(song.id)}
-//                     onKeyDown={(e) => {
-//                       if (e.key === 'Enter' || e.key === ' ') {
-//                         e.preventDefault();
-//                         handleSelectSong(song.id);
-//                       }
-//                     }}
-//                     className={`group relative p-1 cursor-pointer transition-colors ${isActive ? 'bg-blue-900/30' : 'bg-[#0f0f0f]/50 hover:bg-[#282828]/80'}`}
-//                   >
-//                     <div className="relative flex gap-3 items-start min-w-0 w-full">
-//                       <div onClick={() => handleSelectSong(song.id)} className="cursor-pointer flex-shrink-0">
-//                         <ImageWithFallback
-//                           src={song.coverUrl || song.cover}
-//                           alt={song.title}
-//                           className="w-10 h-10 rounded-md object-cover"
-//                           fallback={'https://placehold.co/400x400/1F2937/FFFFFF?text=Music'}
-//                         />
-//                       </div>
-//                       <div className="flex-1 min-w-0 overflow-hidden">
-//                         <h4 className={`text-sm font-semibold truncate ${isActive ? 'text-red-300' : 'text-white'}`}>{song.title}</h4>
-//                         <p className="text-xs text-gray-400 truncate">{Array.isArray(song.artist) ? song.artist.join(', ') : (song.artist || '')}</p>
-//                       </div>
-//                       <div className="absolute right-1 top-1/2 -translate-y-1/2 flex-shrink-0">
-//                         <SongContextMenu
-//                           song={song}
-//                           onAddToQueue={onAddToQueue}
-//                           onAddToPlaylist={onAddToPlaylist}
-//                           onNavigateToArtist={(artist) => navigate(`/artist/${encodeURIComponent(artist)}`)}
-//                           onReport={() => {}}
-//                         />
-//                       </div>
-//                     </div>
-//                   </div>
-//                 );
-//               })}
-//             </div>
-//           ) : (
-//             <div className="text-center text-gray-400 py-10">
-//               <p className="text-lg">No songs found for {vibeName} vibe.</p>
-//               <p className="text-sm mt-2">Try uploading songs for this vibe.</p>
-//             </div>
-//           )}
-//         </div>
-//       </div>
-//       </div>
-
-//       <div className="hidden md:flex md:flex-grow md:min-h-0 md:min-w-0 md:overflow-hidden md:flex-row">
-//         <div className="flex-shrink-0 transition-all duration-300 bg-[#0f0f0f]/80 p-6 md:w-[430px] md:min-w-[430px] md:sticky md:top-0 md:h-full md:border-r md:border-gray-800 md:p-5">
-//           <div className="flex items-center gap-3 mb-0 md:mb-4">
-//             <Link to="/" className="p-2 rounded-full bg-[#0f0f0f] hover:bg-[#282828] flex-shrink-0">
-//               <ArrowLeft size={20} />
-//             </Link>
-//           </div>
-
-//           {dailySongs.length > 0 && (
-//             <div className="mt-4 md:mt-8 md:flex md:flex-col md:items-center md:text-center">
-//               <ImageWithFallback
-//                 src={getVibeImageUrl(vibeName)}
-//                 alt={vibeName}
-//                 className="w-56 h-56 rounded-xl object-cover shadow-lg md:w-64 md:h-64"
-//                 fallback={'https://placehold.co/400x400/1F2937/FFFFFF?text=Music'}
-//               />
-//               <div className="flex-1 mt-5 md:mt-7 md:w-full">
-//                 <h2 className="text-4xl leading-none tracking-tight font-bold text-white md:text-4xl">{vibeName}</h2>
-//                 <div className="mt-6 flex items-center justify-center gap-5 md:gap-6">
-//                   <button
-//                     onClick={async () => {
-//                       await handleSaveVibeAsPlaylist();
-//                     }}
-//                     className="rounded-full p-2 text-white transition-colors hover:bg-[#282828]"
-//                     aria-label="Save vibe as playlist"
-//                   >
-//                     <Bookmark size={20} className={isSaved ? 'fill-current text-red-400' : ''} />
-//                   </button>
-//                   <button
-//                     onClick={() => {
-//                       if (dailySongs.length > 0) {
-//                         handleSelectSong(dailySongs[0].id);
-//                       }
-//                     }}
-//                     className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 shadow-sm shadow-red-500/40 transition-all hover:bg-blue-500 md:h-16 md:w-16"
-//                     aria-label={isPlaying ? 'Pause vibe playback' : 'Play vibe'}
-//                   >
-//                     {isPlaying ? <Pause className="h-7 w-7 fill-white text-white md:h-8 md:w-8" /> : <Play className="ml-1 h-7 w-7 fill-white text-white md:h-8 md:w-8" />}
-//                   </button>
-
-//                   <div className="relative">
-//                     <button
-//                       onClick={() => setVibeMenuOpen(!vibeMenuOpen)}
-//                       className="rounded-full bg-[#1f1f1f] p-2 text-white transition-colors hover:bg-[#282828]"
-//                       aria-label="Vibe actions"
-//                     >
-//                       <MoreVertical size={20} />
-//                     </button>
-//                     {vibeMenuOpen && (
-//                       <div className="absolute right-0 bottom-full mb-2 w-40 bg-[#1f1f1f] rounded-lg shadow-lg z-20">
-//                         <button
-//                           onClick={() => {
-//                             handleToggleShuffle();
-//                             setVibeMenuOpen(false);
-//                           }}
-//                           className="w-full text-left px-4 py-2 hover:bg-[#282828] rounded-t-lg flex items-center gap-2 text-white transition-colors"
-//                         >
-//                           <Shuffle size={16} />
-//                           <span>Shuffle</span>
-//                         </button>
-//                         <button
-//                           onClick={async () => {
-//                             await handleSaveVibeAsPlaylist();
-//                           }}
-//                           className="w-full text-left px-4 py-2 hover:bg-[#282828] flex items-center gap-2 text-white transition-colors"
-//                         >
-//                           <Bookmark size={16} className={isSaved ? 'fill-current text-red-400' : ''} />
-//                           <span>{isSaved ? 'Already Saved' : 'Save'}</span>
-//                         </button>
-//                         <button
-//                           onClick={() => {
-//                             if (onAddToQueue && dailySongs.length > 0) {
-//                               onAddToQueue(dailySongs);
-//                             }
-//                             setVibeMenuOpen(false);
-//                           }}
-//                           className="w-full text-left px-4 py-2 hover:bg-[#282828] rounded-b-lg flex items-center gap-2 text-white transition-colors"
-//                         >
-//                           <Plus size={16} />
-//                           <span>Add to Queue</span>
-//                         </button>
-//                       </div>
-//                     )}
-//                   </div>
-//                 </div>
-//               </div>
-//             </div>
-//           )}
-//         </div>
-
-//         <div className="flex-1 flex flex-col min-h-0">
-//           <div className="flex-shrink-0 bg-[#0f0f0f]/80 px-4 py-2 pb-2 md:px-6 md:pt-4">
-//             <div className="relative">
-//               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-//               <input
-//                 ref={searchInputRef}
-//                 type="text"
-//                 placeholder={`Search songs in ${vibeName}...`}
-//                 value={searchTerm}
-//                 onChange={(e) => setSearchTerm(e.target.value)}
-//                 className="w-full bg-[#1f1f1f]/40 text-white rounded py-2 pl-10 pr-10 text-sm focus:outline-none focus:bg-[#1f1f1f]"
-//                 autoComplete="off"
-//               />
-//               {searchTerm && (
-//                 <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
-//                   <X size={16} />
-//                 </button>
-//               )}
-//             </div>
-//           </div>
-
-//           <div ref={desktopScrollContainerRef} className="flex-1 min-h-0 mt-2 overflow-y-auto overscroll-contain custom-scrollbar p-4 pb-28 md:p-4 md:pb-28">
-//             {filteredSongs.length > 0 ? (
-//               <div className="space-y-1 md:space-y-1 mr-8">
-//                 {filteredSongs.map((song) => {
-//                   const isActive = currentSongId === song.id && isPlaying;
-//                   return (
-//                     <div
-//                       key={song.id}
-//                       role="button"
-//                       tabIndex={0}
-//                       onClick={() => handleSelectSong(song.id)}
-//                       onKeyDown={(e) => {
-//                         if (e.key === 'Enter' || e.key === ' ') {
-//                           e.preventDefault();
-//                           handleSelectSong(song.id);
-//                         }
-//                       }}
-//                       className={`group relative flex cursor-pointer items-center border-b gap-1 rounded border-gray-800 bg-[#0f0f0f]/50 px-1 py-1 pr-12 transition-colors hover:bg-[#282828]/80 md:gap-4 md:px-1 md:py-1 md:pr-14 overflow-visible z-0 ${isActive ? 'border-red-500 bg-blue-900/20' : ''}`}
-//                     >
-//                       <div className="flex-shrink-0">
-//                         <ImageWithFallback
-//                           src={song.coverUrl || song.cover}
-//                           alt={song.title}
-//                           className="h-10 w-10 rounded object-cover md:h-10 md:w-10"
-//                           fallback={'https://placehold.co/400x400/1F2937/FFFFFF?text=Music'}
-//                         />
-//                       </div>
-
-//                       <div className="flex flex-1 items-center justify-between gap-3 overflow-hidden min-w-0">
-//                         <div className="min-w-0 flex-1 overflow-hidden">
-//                           <div className="truncate text-sm font-semibold text-white md:text-base">{song.title}</div>
-//                           <div className="truncate text-xs text-gray-400 md:text-sm">{Array.isArray(song.artist) ? song.artist.join(', ') : (song.artist || '')}</div>
-//                         </div>
-//                         <div className="flex items-center gap-3 flex-shrink-0">
-//                           <span className="text-xs text-gray-300 md:text-sm mr-1">{formatDuration(song)}</span>
-//                           <div className="relative z-50 md:opacity-100 md:group-hover:opacity-100 md:transition-opacity">
-//                             <SongContextMenu
-//                               song={song}
-//                               onAddToQueue={onAddToQueue}
-//                               onAddToPlaylist={onAddToPlaylist}
-//                               onNavigateToArtist={(artist) => navigate(`/artist/${encodeURIComponent(artist)}`)}
-//                               onReport={() => {}}
-//                             />
-//                           </div>
-//                         </div>
-//                       </div>
-//                     </div>
-//                   );
-//                 })}
-//               </div>
-//             ) : (
-//               <div className="text-center text-gray-400 py-10">
-//                 <p className="text-lg">No songs found for {vibeName} vibe.</p>
-//                 <p className="text-sm mt-2">Try uploading songs for this vibe.</p>
-//               </div>
-//             )}
-//           </div>
-//         </div>
-//       </div>
-//     </>
-//   );
-// };
+      <div className="flex-1 w-2/6">
+        {likedSongs.length === 0 ? (
+            <div className="grid min-h-56 place-items-center rounded-2xl border border-white/10 bg-white/3 p-8 text-center">
+                {searchOpen && <input autoFocus value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search liked songs..." className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#dbcece]" />}
+                <br />
+                <div>
+                    <Heart className="mx-auto mb-3 text-white" size={34} />
+                    <p className="text-lg font-semibold">
+                        No liked songs yet
+                    </p>
+                    <p className="mt-2 text-sm text-white/45">
+                        Tap the like button on songs to save it here.
+                    </p>
+                </div>
+            </div>
+        ) : filteredSongs.length === 0 ? (
+          <p className="py-10 text-center text-sm text-white/45">No liked songs match your search.</p>
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/3">
+            {searchOpen && <input autoFocus value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search liked songs..." className="mt-5 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#dcd5d5]" />}
+            {filteredSongs.map((song, index) => {
+              const active = currentTrack?.id === song.id
+              return (
+                <article key={song.id} className={`flex items-center gap-3 border-b border-white/6 px-4 py-3 last:border-b-0 ${active ? 'bg-[#c88d3b]/10' : 'hover:bg-white/4'}`}>
+                    <span className="w-6 text-center text-xs text-white/35">{index + 1}</span>
+                    <button type="button" onClick={() => playTrack(song, likedSongs)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                        {song.image ? <img src={song.image} alt="" className="h-12 w-12 shrink-0 rounded object-cover" /> : <div className="grid h-12 w-12 shrink-0 place-items-center rounded bg-[#28251f] text-xs text-white/50">AU</div>}
+                        <span className="min-w-0"><span className="block truncate text-sm font-semibold">{song.title || 'Untitled track'}</span><span className="block truncate text-xs text-white/45">{song.artist || 'Unknown Artist'}</span></span>
+                    </button>
+                    <SongActionsMenu song={song} queue={likedSongs} alwaysVisible />
+                    <span className="hidden text-xs text-white/40 sm:block">{formatTime(song.duration)}</span>
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

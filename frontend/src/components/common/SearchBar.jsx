@@ -163,8 +163,14 @@ export default function SearchBar({ disabled = false }) {
     const trimmed = String(value || '').trim()
     if (!trimmed) return
 
-    setQuery(trimmed)
     addToHistory(trimmed)
+
+    const clearSelection = () => {
+      setQuery('')
+      setResults([])
+      setFocused(false)
+      inputRef.current?.blur()
+    }
 
     if (item?.__type === 'song') {
       try {
@@ -186,8 +192,7 @@ export default function SearchBar({ disabled = false }) {
 
         if (normalizedSong.audio) {
           playTrack(normalizedSong, [normalizedSong])
-          setFocused(false)
-          inputRef.current?.blur()
+          clearSelection()
           return
         }
       } catch {
@@ -195,8 +200,12 @@ export default function SearchBar({ disabled = false }) {
       }
     }
 
-    setFocused(true)
-    inputRef.current?.focus()
+    if (item?.__type === 'artist' && item.id) {
+      navigate(`/artist/${encodeURIComponent(String(item.id))}/${encodeURIComponent(trimmed)}`)
+    } else if (item?.__type === 'playlist' && item.id) {
+      navigate(`/playlist/${encodeURIComponent(String(item.id))}/${encodeURIComponent(trimmed)}`)
+    }
+    clearSelection()
   }
 
   const handleClear = () => {

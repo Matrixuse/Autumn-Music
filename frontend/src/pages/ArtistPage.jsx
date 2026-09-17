@@ -6,6 +6,8 @@ import Albums from '../components/sections/Albums';
 import QuickPicks from '../components/sections/QuickPicks';
 import { usePlayer } from '../context/PlayerContext';
 import { getBestAudioUrl, getBestImageUrl } from '../utils/mediaQuality';
+import SongActionsMenu from '../components/common/SongActionsMenu';
+import Loader from '../components/common/Loader';
 
 const getSongArtists = (song = {}) => {
   const items = [];
@@ -38,6 +40,21 @@ const normalizeSong = (song = {}) => ({
   raw: song
 });
 
+const getArtistImageFromSongs = (songs, artistId, artistName) => {
+  const normalizedName = String(artistName || '').trim().toLowerCase();
+  const matchingArtist = songs
+    .flatMap((song) => [
+      ...(Array.isArray(song?.artists?.primary) ? song.artists.primary : []),
+      ...(Array.isArray(song?.artists?.all) ? song.artists.all : [])
+    ])
+    .find((artist) => (
+      (artistId && String(artist?.id) === String(artistId))
+      || (normalizedName && String(artist?.name || '').trim().toLowerCase() === normalizedName)
+    ));
+
+  return getBestImageUrl(matchingArtist?.image || matchingArtist?.image_url || []) || '';
+};
+
 const normalizeArtistBio = (bio, name) => {
   const text = Array.isArray(bio)
     ? bio
@@ -64,7 +81,7 @@ export default function ArtistPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm] = useState('');
   const searchInputRef = useRef(null);
   const mobileScrollContainerRef = useRef(null);
   const desktopScrollContainerRef = useRef(null);
@@ -79,6 +96,7 @@ export default function ArtistPage() {
       try {
         setLoading(true);
         setError('');
+        setArtistImage('');
 
         let resolvedArtistId = artistId;
         let resolvedArtistName = artistName;
@@ -97,15 +115,6 @@ export default function ArtistPage() {
               setArtistImage(getBestImageUrl(result.image || result.cover || result.thumbnail || result.artwork || []) || '');
             }
           }
-        } else {
-          const artistSearchResponse = await axiosInstance.get('/search/artists', {
-            params: { query: resolvedArtistName, page: 0, limit: 5 },
-            signal: controller.signal
-          });
-          const match = (artistSearchResponse.data?.data?.results || []).find((artist) => String(artist.id) === String(resolvedArtistId)) || artistSearchResponse.data?.data?.results?.[0];
-          if (match) {
-            setArtistImage(getBestImageUrl(match.image || match.cover || match.thumbnail || match.artwork || []) || '');
-          }
         }
 
         if (!resolvedArtistId) {
@@ -117,7 +126,7 @@ export default function ArtistPage() {
           return;
         }
 
-        const [songsResult, albumsResult, artistResult] = await Promise.allSettled([
+        const [songsResult, albumsResult] = await Promise.allSettled([
           axiosInstance.get(`/artists/${resolvedArtistId}/songs`, {
             params: { page: 0, limit: 25, sortBy: 'popularity', sortOrder: 'desc' },
             signal: controller.signal
@@ -126,27 +135,23 @@ export default function ArtistPage() {
             params: { page: 0, sortBy: 'popularity', sortOrder: 'desc' },
             signal: controller.signal
           }),
-          axiosInstance.get(`/artists/${resolvedArtistId}`, {
-            params: { page: 0, songCount: 1, albumCount: 1 },
-            signal: controller.signal
-          })
         ]);
 
         const songsResponse = songsResult.status === 'fulfilled' ? songsResult.value : null;
         const albumsResponse = albumsResult.status === 'fulfilled' ? albumsResult.value : null;
-        const artistResponse = artistResult.status === 'fulfilled' ? artistResult.value : null;
         const result = Array.isArray(songsResponse?.data?.data?.songs) ? songsResponse.data.data.songs : [];
         const normalized = result.map(normalizeSong).slice(0, 25);
         const artistAlbums = Array.isArray(albumsResponse?.data?.data?.albums) ? albumsResponse.data.data.albums : [];
         const randomAlbums = [...artistAlbums].sort(() => Math.random() - 0.5).slice(0, 8);
-        const artistDetails = artistResponse?.data?.data;
-        const detailsName = artistDetails?.name || resolvedArtistName || artistName;
-        const bio = normalizeArtistBio(artistDetails?.bio, detailsName);
+        const detailsName = resolvedArtistName || artistName;
+        const bio = normalizeArtistBio('', detailsName);
+        const songArtistImage = getArtistImageFromSongs(result, resolvedArtistId, detailsName);
 
         if (!controller.signal.aborted) {
           setSongs(normalized);
           setAlbums(randomAlbums);
           setArtistBio(bio);
+          if (songArtistImage) setArtistImage(songArtistImage);
           if (resolvedArtistName && routeArtistName !== encodeURIComponent(resolvedArtistName)) {
             navigate(`/artist/${resolvedArtistId}/${encodeURIComponent(resolvedArtistName)}`, { replace: true });
           }
@@ -214,7 +219,7 @@ export default function ArtistPage() {
     };
   }, [artistId, artistName]);
 
-  const displayArtistImage = artistImage || songs[0]?.image || 'https://placehold.co/400x400/1F2937/FFFFFF?text=Music';
+  const displayArtistImage = artistImage || 'https://placehold.co/400x400/1F2937/FFFFFF?text=Artist';
 
   const filteredSongs = useMemo(() => {
     const matching = songs;
@@ -227,7 +232,7 @@ export default function ArtistPage() {
       const artistText = (song.artist || '').toLowerCase();
       return title.includes(query) || artistText.includes(query);
     });
-  }, [artistName, searchTerm, songs]);
+  }, [searchTerm, songs]);
 
   const formatDuration = (song) => {
     const duration = Number(song?.duration || 0);
@@ -239,11 +244,8 @@ export default function ArtistPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center p-8 text-center text-white">
-        <div className="max-w-md rounded-2xl bg-[#0f0f0f]/80 p-8 shadow-xl">
-          <p className="text-lg font-semibold">Loading your artist...</p>
-          <p className="mt-2 text-sm text-gray-400">Please wait while we fetch your songs.</p>
-        </div>
+      <div className="grid min-h-[50vh] place-items-center p-8 text-white">
+        <Loader label="Loading artist" />
       </div>
     );
   }
@@ -282,7 +284,7 @@ export default function ArtistPage() {
             {isHeaderExpanded && (
               <div className="mt-4 flex items-center">
                 <img
-                  src={songs[0]?.image || 'https://placehold.co/400x400/1F2937/FFFFFF?text=Music'}
+                  src={displayArtistImage}
                   alt={artistName}
                   className="h-24 w-24 rounded-lg object-cover shadow-lg"
                 />
@@ -316,7 +318,7 @@ export default function ArtistPage() {
                       <h4 className="truncate text-sm font-semibold text-white">{song.title}</h4>
                       <p className="truncate text-xs text-gray-400">{song.artist}</p>
                     </div>
-                    <div className="absolute right-1 top-1/2 -translate-y-1/2 shrink-0 text-xs text-gray-300">{formatDuration(song)}</div>
+                    <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-2"><span className="text-xs text-gray-300">{formatDuration(song)}</span><SongActionsMenu song={song} queue={filteredSongs} /></div>
                   </div>
                 </div>
               ))}
@@ -354,16 +356,12 @@ export default function ArtistPage() {
                 <h2 className="text-4xl font-bold leading-none tracking-tight text-white">{artistName}</h2>
                 <div className="mt-6 flex items-center justify-center gap-5 md:gap-6">
                 <button className="rounded-full bg-[#0f0f0f]/50 p-2 text-white backdrop-blur-sm transition-colors hover:bg-[#282828]/80" aria-label="Play artist songs">
-                  <Play size={20} className="fill-white text-white" />
+                  <Shuffle size={20} className="fill-white text-white" />
                 </button>
                 <button className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 shadow-sm shadow-red-500/40 transition-all hover:bg-blue-500 md:h-16 md:w-16" aria-label="Play artist songs">
                   <Play className="ml-1 h-7 w-7 fill-white text-white md:h-8 md:w-8" />
                 </button>
-                <div className="relative">
-                  <button className="rounded-full bg-[#0f0f0f]/50 p-2 text-white backdrop-blur-sm transition-colors hover:bg-[#282828]/80" aria-label="Artist actions">
-                    <MoreVertical size={20} />
-                  </button>
-                </div>
+                <SongActionsMenu song={filteredSongs[0]} queue={filteredSongs} alwaysVisible />
                 </div>
               </div>
             </div>
@@ -386,6 +384,7 @@ export default function ArtistPage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       <span className="mr-1 text-xs text-gray-300 md:text-sm">{formatDuration(song)}</span>
+                      <SongActionsMenu song={song} queue={filteredSongs} />
                     </div>
                   </div>
                 </div>

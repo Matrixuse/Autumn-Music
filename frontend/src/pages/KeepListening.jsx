@@ -6,6 +6,7 @@ import { getBestImageUrl, getBestAudioUrl } from '../utils/mediaQuality'
 import { formatTime } from '../utils/formatTime'
 import { isLikelyHollywoodSong, searchSongs } from '../api/songs'
 import { searchPlaylists } from '../api/playlists'
+import Loader from '../components/common/Loader'
 
 const tabs = ['UP NEXT', 'LYRICS', 'RELATED']
 
@@ -231,10 +232,10 @@ export default function KeepListening() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1 scrollbar-thumb-gray-300">
             {activeTab === 'UP NEXT' && renderSongList(queue, 'Your queue is empty.')}
-            {activeTab === 'RELATED' && (relatedLoading ? <div className="grid min-h-56 place-items-center text-sm text-white/45">Loading related songs...</div> : <><div className="space-y-1">{relatedSongs.length ? <div className="scrollbar-none grid h-60 auto-cols-[minmax(22rem,1fr)] grid-flow-col grid-rows-4 gap-x-2 overflow-x-auto overflow-y-hidden">{relatedSongs.map(renderSongRow)}</div> : renderSongList([], 'No related songs available.')}</div>{renderArtistRail()}{renderPlaylistRail()}</>)}
-            {activeTab === 'LYRICS' && (lyricsLoading ? <div className="grid min-h-56 place-items-center text-sm text-white/45">Loading lyrics...</div> : <div className="whitespace-pre-wrap px-3 py-2 text-sm leading-7 text-white/80">{lyrics || 'Lyrics are not available for this song.'}</div>)}
+            {activeTab === 'RELATED' && (relatedLoading ? <div className="grid min-h-56 place-items-center"><Loader label="Loading related songs" /></div> : <><div className="space-y-1">{relatedSongs.length ? <div className="scrollbar-none grid h-60 auto-cols-[minmax(22rem,1fr)] grid-flow-col grid-rows-4 gap-x-2 overflow-x-auto overflow-y-hidden">{relatedSongs.map(renderSongRow)}</div> : renderSongList([], 'No related songs available.')}</div>{renderArtistRail()}{renderPlaylistRail()}</>)}
+            {activeTab === 'LYRICS' && (lyricsLoading ? <div className="grid min-h-56 place-items-center"><Loader label="Loading lyrics" /></div> : <div className="whitespace-pre-wrap px-3 py-2 text-sm leading-7 text-white/80">{lyrics || 'Lyrics are not available for this song.'}</div>)}
           </div>
         </div>
       </div>

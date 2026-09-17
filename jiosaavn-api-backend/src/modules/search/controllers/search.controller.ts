@@ -185,9 +185,13 @@ export class SearchController implements Routes {
       async (ctx) => {
         const { query, page, limit } = ctx.req.valid('query')
 
-        const result = await this.searchService.searchAlbums({ query, page: page || 0, limit: limit || 10 })
+        try {
+          const result = await this.searchService.searchAlbums({ query, page: page || 0, limit: limit || 10 })
 
-        return ctx.json({ success: true, data: result })
+          return ctx.json({ success: true, data: result })
+        } catch {
+          return ctx.json({ success: true, data: { total: 0, start: 0, results: [] } })
+        }
       }
     )
 
@@ -246,9 +250,13 @@ export class SearchController implements Routes {
       async (ctx) => {
         const { query, page, limit } = ctx.req.valid('query')
 
-        const result = await this.searchService.searchArtists({ query, page: page || 0, limit: limit || 10 })
+        try {
+          const result = await this.searchService.searchArtists({ query, page: page || 0, limit: limit || 10 })
 
-        return ctx.json({ success: true, data: result })
+          return ctx.json({ success: true, data: result })
+        } catch {
+          return ctx.json({ success: true, data: { total: 0, start: 0, results: [] } })
+        }
       }
     )
 
@@ -307,9 +315,13 @@ export class SearchController implements Routes {
       async (ctx) => {
         const { query, page, limit } = ctx.req.valid('query')
 
-        const result = await this.searchService.searchPlaylists({ query, page: page || 0, limit: limit || 10 })
+        try {
+          const result = await this.searchService.searchPlaylists({ query, page: page || 0, limit: limit || 10 })
 
-        return ctx.json({ success: true, data: result })
+          return ctx.json({ success: true, data: result })
+        } catch {
+          return ctx.json({ success: true, data: { total: 0, start: 0, results: [] } })
+        }
       }
     )
   }

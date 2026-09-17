@@ -288,15 +288,19 @@ export class ArtistController implements Routes {
         const artistId = ctx.req.param('id')
         const { page, limit, sortBy, sortOrder } = ctx.req.valid('query')
 
-        const response = await this.artistService.getArtistSongs({
-          artistId,
-          page: page || 0,
-          limit: limit || 25,
-          sortBy: sortBy || 'popularity',
-          sortOrder: sortOrder || 'desc'
-        })
+        try {
+          const response = await this.artistService.getArtistSongs({
+            artistId,
+            page: page || 0,
+            limit: limit || 25,
+            sortBy: sortBy || 'popularity',
+            sortOrder: sortOrder || 'desc'
+          })
 
-        return ctx.json({ success: true, data: response })
+          return ctx.json({ success: true, data: response })
+        } catch {
+          return ctx.json({ success: true, data: { total: 0, songs: [] } })
+        }
       }
     )
 
@@ -373,14 +377,18 @@ export class ArtistController implements Routes {
         const artistId = ctx.req.param('id')
         const { page, sortBy, sortOrder } = ctx.req.valid('query')
 
-        const response = await this.artistService.getArtistAlbums({
-          artistId,
-          page: page || 0,
-          sortBy: sortBy || 'popularity',
-          sortOrder: sortOrder || 'desc'
-        })
+        try {
+          const response = await this.artistService.getArtistAlbums({
+            artistId,
+            page: page || 0,
+            sortBy: sortBy || 'popularity',
+            sortOrder: sortOrder || 'desc'
+          })
 
-        return ctx.json({ success: true, data: response })
+          return ctx.json({ success: true, data: response })
+        } catch {
+          return ctx.json({ success: true, data: { total: 0, albums: [] } })
+        }
       }
     )
   }

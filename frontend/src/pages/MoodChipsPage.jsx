@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Play } from 'lucide-react'
 import axiosInstance from '../api/axiosInstance'
-import { getBestImageUrl } from '../utils/mediaQuality'
-import SongCard from '../components/cards/SongCard'
 import MoodChips from '../components/sections/MoodChips'
+import QuickPicks from '../components/sections/QuickPicks'
+import Moods from '../components/sections/Moods'
+import PopularArtists from '../components/sections/PopularArtists'
+import MixForYou from '../components/sections/MixForYou'
+import { getMoodQuickPicksSongs } from '../api/songs'
+import { searchPlaylists } from '../api/playlists'
+import { getBestImageUrl } from '../utils/mediaQuality'
+import Loader from '../components/common/Loader'
 
 const moodMap = {
   Relax: 'relaxing',
@@ -18,24 +23,68 @@ const moodMap = {
   Sleep: 'sleep'
 }
 
-const normalizeSong = (song = {}) => ({
-  id: song.id || song._id || `${song.name || song.title || 'song'}-${Math.random().toString(36).slice(2, 8)}`,
-  title: song.name || song.title || 'Unknown Track',
-  artist: Array.isArray(song.artists?.all)
-    ? song.artists.all.map((artist) => artist?.name || artist?.title).filter(Boolean).join(', ')
-    : Array.isArray(song.artists?.primary)
-      ? song.artists.primary.map((artist) => artist?.name || artist?.title).filter(Boolean).join(', ')
-      : song.artist || song.subtitle || 'Unknown Artist',
-  image: getBestImageUrl(song.image || song.cover || song.artwork || song.thumbnail || []) || null,
-  duration: Number(song.duration || song.more_info?.duration || 0) || 0,
-  raw: song,
+const normalizeArtist = (artist = {}) => ({
+  id: artist.id || artist._id || artist.name,
+  name: artist.name || artist.title || 'Unknown Artist',
+  image: getBestImageUrl(artist.image || artist.images || artist.thumbnail),
 })
+
+const getMoodArtists = async (moodQuery, moodSongs = []) => {
+  const queries = [`${moodQuery} artists`, `${moodQuery} singers`, `${moodQuery} music artists`]
+  const responses = await Promise.all(queries.map(async (query) => {
+    try {
+      const response = await axiosInstance.get('/search/artists', {
+        params: { query, page: 0, limit: 7 },
+      })
+      return response.data?.data?.results || []
+    } catch {
+      return []
+    }
+  }))
+
+  const artists = new Map()
+  responses.flat().forEach((artist) => {
+    const normalized = normalizeArtist(artist)
+    if (normalized.id && normalized.name !== 'Unknown Artist') artists.set(String(normalized.id), normalized)
+  })
+
+  moodSongs.forEach((song) => {
+    const names = String(song?.artist || '').split(',').map((name) => name.trim()).filter(Boolean)
+    names.forEach((name) => {
+      if (artists.size >= 7) return
+      const id = `mood-${name.toLowerCase()}`
+      if (!artists.has(id)) artists.set(id, { id, name, image: song.image || null })
+    })
+  })
+
+  return [...artists.values()].slice(0, 7)
+}
+
+const getMoodPlaylists = async (moodQuery) => {
+  const queries = [`${moodQuery} songs playlist`, `${moodQuery} music playlist`, `${moodQuery} playlist`]
+  const responses = await Promise.all(queries.map(async (query) => {
+    try {
+      return await searchPlaylists(query, 7)
+    } catch {
+      return []
+    }
+  }))
+
+  const playlists = new Map()
+  responses.flat().forEach((playlist) => {
+    if (playlist?.image || playlist?.url) playlists.set(`${playlist.id}-${playlist.name}`, playlist)
+  })
+
+  return [...playlists.values()].slice(0, 7)
+}
 
 export default function MoodChipsPage() {
   const { moodName } = useParams()
   const decodedMood = decodeURIComponent(String(moodName || ''))
-  const query = moodMap[decodedMood] ? `${moodMap[decodedMood]} songs` : `${decodedMood || 'happy'} songs`
+  const moodQuery = moodMap[decodedMood] || decodedMood || 'happy'
   const [songs, setSongs] = useState([])
+  const [artists, setArtists] = useState([])
+  const [playlists, setPlaylists] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -47,15 +96,16 @@ export default function MoodChipsPage() {
         setLoading(true)
         setError('')
 
-        const response = await axiosInstance.get('/search/songs', {
-          params: { query, page: 0, limit: 20 },
-          signal: controller.signal,
-        })
-
-        const results = response.data?.data?.results || []
+        const songResults = await getMoodQuickPicksSongs(moodQuery, 24)
+        const [artistResults, playlistResults] = await Promise.all([
+          getMoodArtists(moodQuery, songResults),
+          getMoodPlaylists(moodQuery),
+        ])
 
         if (!controller.signal.aborted) {
-          setSongs(results.map(normalizeSong))
+          setSongs(songResults)
+          setArtists(artistResults)
+          setPlaylists(playlistResults)
         }
       } catch {
         if (!controller.signal.aborted) {
@@ -71,26 +121,12 @@ export default function MoodChipsPage() {
 
     loadMoodSongs()
     return () => controller.abort()
-  }, [query])
+  }, [moodQuery])
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center p-8 text-center text-white">
-        <div className="max-w-md rounded-2xl border border-gray-700 bg-[#0f0f0f]/80 p-8 shadow-xl">
-          <p className="text-lg font-semibold">Loading {decodedMood || 'this mood'}...</p>
-          <p className="mt-2 text-sm text-gray-400">Please wait while we find songs for your mood.</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error || !songs.length) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center p-8 text-center text-white">
-        <div className="max-w-md rounded-2xl border border-gray-700 bg-[#0f0f0f]/80 p-8 shadow-xl">
-          <p className="text-lg font-semibold">No songs for this mood yet.</p>
-          <p className="mt-2 text-sm text-gray-400">{error || 'Try another mood chip to explore more music.'}</p>
-        </div>
+      <div className="grid min-h-[50vh] place-items-center p-8 text-white">
+        <Loader label={`Loading ${decodedMood || 'mood'}`} />
       </div>
     )
   }
@@ -98,10 +134,23 @@ export default function MoodChipsPage() {
   return (
     <div className="space-y-8">
       <MoodChips />
-      
-      <div>
-        <h1 className="mt-2 font-['Space_Grotesk'] text-4xl font-bold">{decodedMood}</h1>
-      </div>
+
+      {loading ? (
+        <p className="text-sm text-white/60">Finding {decodedMood.toLowerCase()} quick picks...</p>
+      ) : songs.length ? (
+        <>
+          <QuickPicks songs={songs} limit={24} />
+          <Moods songs={songs} title="Your mood" eyebrow={`Songs for ${decodedMood}`} limit={15} />
+          {artists.length > 0 && <PopularArtists artists={artists} title="Related artists" eyebrow={`Artists for ${decodedMood}`} limit={7} />}
+          {playlists.length > 0 && <MixForYou playlists={playlists} title="Mix for you" eyebrow={`Playlists for ${decodedMood}`} limit={7} />}
+        </>
+      ) : (
+        <p className="text-sm text-white/60">No {decodedMood.toLowerCase()} songs are available right now.</p>
+      )}
+      <br />
+      <br />
+      <br />
+      {error && <p className="text-sm text-red-400">{error}</p>}
     </div>
   )
-};
+}

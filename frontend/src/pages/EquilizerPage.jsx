@@ -125,8 +125,7 @@ export default function EquilizerPage() {
                     step="1"
                     value={value}
                     onChange={(event) => updateBand(bandControls.findIndex((item) => item.frequency === frequency), event.target.value)}
-                    orient="vertical"
-                    style={{ writingMode: 'bt-lr', WebkitAppearance: 'slider-vertical' }}
+                    style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
                   />
                 </div>
                 <div className="flex w-full flex-col items-center gap-1">
@@ -199,7 +198,6 @@ export default function EquilizerPage() {
           onClick={() => (isPlaying ? togglePlay() : togglePlay())}
           className="rounded-full bg-[#b86a24] px-5 py-2.5 text-sm font-bold text-[#1b130a] transition hover:bg-[#d88843]"
         >
-          {isReady ? 'Live preview' : 'Ready'}
         </button>
       </div>
     </div>

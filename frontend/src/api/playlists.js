@@ -1,5 +1,6 @@
 import axiosInstance from './axiosInstance'
 import { getBestImageUrl } from '../utils/mediaQuality'
+import { mapWithConcurrency } from './requestQueue'
 
 export const moodPlaylistSeeds = [
   { mood: 'romantic', query: 'romantic songs playlist' },
@@ -91,16 +92,14 @@ export const searchPlaylists = async (query, limit = 10, page = 0) => {
 
 export const getMixForYouPlaylists = async (history = [], limit = 10) => {
   const queries = getDailyMoodPlaylistQueries(history, limit)
-  const results = await Promise.all(
-    queries.map(async (query) => {
+  const results = await mapWithConcurrency(queries, async (query) => {
       try {
         const items = await searchPlaylists(query, 6)
         return items.filter((item) => item.image || item.url)
       } catch {
         return []
       }
-    })
-  )
+    }, 3)
 
   const selected = []
   const seen = new Set()
@@ -120,9 +119,10 @@ export const getMixForYouPlaylists = async (history = [], limit = 10) => {
 
   if (selected.length >= limit) return selected.slice(0, limit)
 
-  const fallback = await Promise.all(
-    ['romantic songs playlist', 'party songs playlist', 'chill songs playlist', 'happy songs playlist', 'sad songs playlist', 'travel songs playlist']
-      .map((query) => searchPlaylists(query, 3))
+  const fallback = await mapWithConcurrency(
+    ['romantic songs playlist', 'party songs playlist', 'chill songs playlist', 'happy songs playlist', 'sad songs playlist', 'travel songs playlist'],
+    (query) => searchPlaylists(query, 3).catch(() => []),
+    3
   )
 
   const fallbackItems = fallback.flat().filter((item) => item.image || item.url)

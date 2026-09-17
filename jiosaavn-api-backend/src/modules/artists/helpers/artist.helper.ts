@@ -9,6 +9,26 @@ import type {
 } from '#modules/artists/models'
 import type { z } from 'zod'
 
+const parseJson = <T>(value: string | null | undefined, fallback: T): T => {
+  if (!value) return fallback
+
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
+
+const parseBio = (value: string | null | undefined) => {
+  const parsed = parseJson<unknown>(value, null)
+  return Array.isArray(parsed) ? parsed : null
+}
+
+const parseLanguages = (value: string | null | undefined) => {
+  const parsed = parseJson<unknown>(value, null)
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, string> : null
+}
+
 export const createArtistPayload = (artist: z.infer<typeof ArtistAPIResponseModel>): z.infer<typeof ArtistModel> => ({
   id: artist.artistId || artist.id,
   name: artist.name,
@@ -19,7 +39,7 @@ export const createArtistPayload = (artist: z.infer<typeof ArtistAPIResponseMode
   isVerified: artist.isVerified || null,
   dominantLanguage: artist.dominantLanguage || null,
   dominantType: artist.dominantType || null,
-  bio: artist.bio ? JSON.parse(artist.bio) : null,
+  bio: parseBio(artist.bio),
   dob: artist.dob || null,
   fb: artist.fb || null,
   twitter: artist.twitter || null,
@@ -36,7 +56,7 @@ export const createArtistPayload = (artist: z.infer<typeof ArtistAPIResponseMode
       name: similarArtist.name,
       url: similarArtist.perma_url,
       image: createImageLinks(similarArtist.image_url),
-      languages: similarArtist.languages ? JSON.parse(similarArtist.languages) : null,
+      languages: parseLanguages(similarArtist.languages),
       wiki: similarArtist.wiki,
       dob: similarArtist.dob,
       fb: similarArtist.fb,
@@ -45,8 +65,8 @@ export const createArtistPayload = (artist: z.infer<typeof ArtistAPIResponseMode
       type: similarArtist.type,
       dominantType: similarArtist.dominantType,
       aka: similarArtist.aka,
-      bio: similarArtist.bio ? JSON.parse(similarArtist.bio) : null,
-      similarArtists: similarArtist.similar ? JSON.parse(similarArtist.similar) : null
+      bio: parseJson(similarArtist.bio, null),
+      similarArtists: parseJson(similarArtist.similar, null)
     })) || null
 })
 

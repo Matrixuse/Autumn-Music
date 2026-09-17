@@ -1,12 +1,39 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useAudioPlayer } from '../hooks/useAudioPlayer'
+import PlayerContext from './player-context'
 
-const PlayerContext = createContext(null)
 const HISTORY_LIMIT = 18
 
 const readHistory = () => {
   try {
     const raw = localStorage.getItem('autumn_listen_history')
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+const readLikedSongs = () => {
+  try {
+    const raw = localStorage.getItem('autumn_liked_songs')
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+const readUserPlaylists = () => {
+  try {
+    const raw = localStorage.getItem('autumn_user_playlists')
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+const readStoredList = (key) => {
+  try {
+    const raw = localStorage.getItem(key)
     return raw ? JSON.parse(raw) : []
   } catch {
     return []
@@ -34,6 +61,10 @@ export const PlayerProvider = ({ children }) => {
   const [currentTrack, setCurrentTrack] = useState(null)
   const [queue, setQueue] = useState([])
   const [listenHistory, setListenHistory] = useState(() => readHistory())
+  const [likedSongs, setLikedSongs] = useState(() => readLikedSongs())
+  const [userPlaylists, setUserPlaylists] = useState(() => readUserPlaylists())
+  const [listenAgain, setListenAgain] = useState(() => readStoredList('autumn_listen_again'))
+  const [notInterested, setNotInterested] = useState(() => readStoredList('autumn_not_interested'))
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -46,6 +77,22 @@ export const PlayerProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('autumn_listen_history', JSON.stringify(listenHistory))
   }, [listenHistory])
+
+  useEffect(() => {
+    localStorage.setItem('autumn_liked_songs', JSON.stringify(likedSongs))
+  }, [likedSongs])
+
+  useEffect(() => {
+    localStorage.setItem('autumn_user_playlists', JSON.stringify(userPlaylists))
+  }, [userPlaylists])
+
+  useEffect(() => {
+    localStorage.setItem('autumn_listen_again', JSON.stringify(listenAgain))
+  }, [listenAgain])
+
+  useEffect(() => {
+    localStorage.setItem('autumn_not_interested', JSON.stringify(notInterested))
+  }, [notInterested])
 
   const playTrack = (track, nextQueue) => {
     if (!track) return
@@ -63,6 +110,77 @@ export const PlayerProvider = ({ children }) => {
   }
 
   const togglePlay = () => setIsPlaying((playing) => !playing)
+  const isLiked = (trackId) => likedSongs.some((song) => String(song.id) === String(trackId))
+  const toggleLike = (track) => {
+    if (!track?.id) return
+
+    setLikedSongs((songs) => {
+      if (songs.some((song) => String(song.id) === String(track.id))) {
+        return songs.filter((song) => String(song.id) !== String(track.id))
+      }
+
+      return [{ ...track }, ...songs]
+    })
+  }
+  const addToQueue = (track, playNext = false) => {
+    if (!track?.id) return
+
+    setQueue((currentQueue) => {
+      const withoutTrack = currentQueue.filter((item) => String(item.id) !== String(track.id))
+      const currentIndex = withoutTrack.findIndex((item) => String(item.id) === String(currentTrack?.id))
+      const current = currentIndex >= 0 ? withoutTrack[currentIndex] : currentTrack
+      const remaining = currentIndex >= 0 ? withoutTrack.filter((_, index) => index !== currentIndex) : withoutTrack
+
+      if (!current) return playNext ? [track, ...remaining] : [...remaining, track]
+      if (playNext) return [current, track, ...remaining]
+      return [current, ...remaining, track]
+    })
+  }
+  const addTracksToQueue = (tracks, playNext = false) => {
+    const validTracks = (Array.isArray(tracks) ? tracks : []).filter((track) => track?.id)
+    if (!validTracks.length) return
+
+    setQueue((currentQueue) => {
+      const additions = validTracks.filter((track) => !currentQueue.some((item) => String(item.id) === String(track.id)))
+      if (!additions.length) return currentQueue
+      const currentIndex = currentQueue.findIndex((item) => String(item.id) === String(currentTrack?.id))
+      if (currentIndex < 0) return playNext ? [...additions, ...currentQueue] : [...currentQueue, ...additions]
+      const current = currentQueue[currentIndex]
+      const before = currentQueue.slice(0, currentIndex)
+      const after = currentQueue.slice(currentIndex + 1)
+      return playNext ? [...before, current, ...additions, ...after] : [...before, current, ...after, ...additions]
+    })
+  }
+  const addToListenAgain = (track) => {
+    if (!track?.id) return
+    setListenAgain((items) => [{ ...track }, ...items.filter((item) => String(item.id) !== String(track.id))].slice(0, HISTORY_LIMIT))
+  }
+  const isNotInterested = (item) => notInterested.includes(String(item?.id))
+  const markNotInterested = (item) => {
+    if (item?.id) setNotInterested((items) => [...new Set([...items, String(item.id)])])
+  }
+  const restoreInterest = (item) => {
+    if (item?.id) setNotInterested((items) => items.filter((id) => id !== String(item.id)))
+  }
+  const addToLibrary = (item, type = 'song') => {
+    if (!item?.id) return
+    if (type === 'song') {
+      toggleLike(item)
+      return
+    }
+    setUserPlaylists((items) => {
+      if (items.some((playlist) => String(playlist.sourceId || playlist.id) === String(item.id))) return items
+      return [{ ...item, id: `saved-${type}-${item.id}`, sourceId: item.id, savedType: type, isSaved: true, songs: item.songs || [] }, ...items]
+    })
+  }
+  const removeFromLibrary = (item, type = 'song') => {
+    if (!item?.id) return
+    if (type === 'song') {
+      setLikedSongs((songs) => songs.filter((song) => String(song.id) !== String(item.id)))
+      return
+    }
+    setUserPlaylists((items) => items.filter((playlist) => String(playlist.sourceId || playlist.id) !== String(item.id)))
+  }
   const next = () => {
     const index = queue.findIndex((track) => track.id === currentTrack?.id)
     const nextTrack = queue[index + 1]
@@ -108,7 +226,7 @@ export const PlayerProvider = ({ children }) => {
   const { audioRef } = useAudioPlayer({ src: currentTrack?.audio, isPlaying, volume, onTimeUpdate: handleTimeUpdate, onEnded: handleEnded })
 
   return (
-    <PlayerContext.Provider value={{ currentTrack, queue, listenHistory, isPlaying, progress, duration, volume, setVolume, isShuffleEnabled, isRepeatEnabled, isQueueOpen, isRecommendationQueue, playTrack, setPlaybackQueue, togglePlay, next, previous, seek, toggleShuffle, toggleRepeat, toggleQueue, closeQueue }}>
+    <PlayerContext.Provider value={{ currentTrack, queue, listenHistory, likedSongs, isLiked, toggleLike, addToQueue, addTracksToQueue, listenAgain, addToListenAgain, isNotInterested, markNotInterested, restoreInterest, addToLibrary, removeFromLibrary, userPlaylists, setUserPlaylists, isPlaying, progress, duration, volume, setVolume, isShuffleEnabled, isRepeatEnabled, isQueueOpen, isRecommendationQueue, playTrack, setPlaybackQueue, togglePlay, next, previous, seek, toggleShuffle, toggleRepeat, toggleQueue, closeQueue }}>
         {children}
         <audio ref={audioRef} src={currentTrack?.audio || undefined} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} onEnded={handleEnded} />
     </PlayerContext.Provider>

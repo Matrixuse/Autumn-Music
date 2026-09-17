@@ -1,4 +1,6 @@
 import { usePlayer } from '../../context/PlayerContext'
+import SongActionsMenu from '../common/SongActionsMenu'
+import { Play } from 'lucide-react'
 
 const formatDuration = (seconds) => {
     const totalSeconds = Number(seconds || 0)
@@ -22,9 +24,9 @@ const getArtistLabel = (artist) => {
     return String(artist)
 }
 
-export default function QuickPicks({ songs = [] }) {
+export default function QuickPicks({ songs = [], title = 'Quick picks', eyebrow = 'Made for the moment', limit = 24 }) {
     const { playTrack } = usePlayer()
-    const visibleSongs = Array.isArray(songs) ? songs.slice(0, 24) : []
+    const visibleSongs = Array.isArray(songs) ? songs.slice(0, limit) : []
     const columnCount = Math.max(1, Math.ceil(visibleSongs.length / 4))
 
     return (
@@ -32,10 +34,10 @@ export default function QuickPicks({ songs = [] }) {
             <div className="mb-5 flex items-center justify-between gap-4">
                 <div>
                     <p className="mb-1 text-xs font-bold uppercase tracking-[.18em] text-[#d29a55]">
-                        Made for the moment
+                        {eyebrow}
                     </p>
                     <h2 className="font-['Space_Grotesk'] text-3xl font-bold leading-none tracking-[-0.04em] text-white">
-                        Quick picks
+                        {title}
                     </h2>
                 </div>
             </div>
@@ -64,6 +66,9 @@ export default function QuickPicks({ songs = [] }) {
                                                     {song.title?.slice(0, 2) || 'AU'}
                                                 </div>
                                             )}
+                                            <button type="button" aria-label={`Play ${song.title || 'song'}`} onClick={(event) => { event.stopPropagation(); playTrack(song, visibleSongs) }} className="absolute inset-0 grid place-items-center bg-black/45 opacity-0 transition group-hover:opacity-100">
+                                                <span className="grid h-7 w-7 place-items-center rounded-full bg-transparent text-white"><Play size={27} fill="currentColor" /></span>
+                                            </button>
                                         </div>
 
                                         <div className="flex min-w-0 flex-col justify-between gap-1">
@@ -74,9 +79,14 @@ export default function QuickPicks({ songs = [] }) {
                                                 <span>{getArtistLabel(song.artist)}</span>
                                             </div>
                                         </div>
-                                        <span className="ml-auto whitespace-nowrap text-sm font-medium text-white/70">
-                                            {formatDuration(song.duration)}
-                                        </span>
+                                        <div className="relative ml-auto h-8 min-w-8 shrink-0">
+                                            <span className="absolute inset-0 grid place-items-center whitespace-nowrap text-sm font-medium text-white/70 transition-opacity group-hover:opacity-0">
+                                                {formatDuration(song.duration)}
+                                            </span>
+                                            <div className="absolute inset-0 flex items-center justify-end">
+                                                <SongActionsMenu song={song} queue={visibleSongs} />
+                                            </div>
+                                        </div>
                                     </div>
                                 </article>
                             ))}

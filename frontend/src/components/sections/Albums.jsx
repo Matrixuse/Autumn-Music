@@ -13,6 +13,8 @@ export default function Albums({ albums, title = 'Albums for you' }) {
                     <div key={album.id} className="block min-w-42.5 flex-1">
                         <PlaylistCard
                             playlist={album}
+                            itemType="album"
+                            items={album.songs || album.list || []}
                             to={`/album/${album.id}/${encodeURIComponent(album.name || 'album')}`}
                         />
                     </div>

@@ -1,4 +1,4 @@
-import { LogOut, Menu } from 'lucide-react'
+import { LogOut, Menu, UserRound } from 'lucide-react'
 import SearchBar from '../common/SearchBar'
 import Avatar from '../common/Avatar'
 import { useAuth } from '../../context/AuthContext'
@@ -19,7 +19,25 @@ export default function Topbar({ locked = false }) {
             <div className="relative">
                 <button disabled={locked} aria-label="Account menu" className={locked ? 'cursor-not-allowed' : ''}><Avatar label={user?.username || 'Hi'} /></button>
                 <div className="absolute right-0 top-11 w-44 translate-y-1 rounded-xl border border-white/10 bg-[#1a1b1a] p-2 opacity-0 shadow-xl transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-                    {user ? <button disabled={locked} onClick={logout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-white/70 hover:bg-white/10 hover:text-white"><LogOut size={15} />Log out</button> : <div><Link to="/login" className="block rounded-lg px-3 py-2 text-xs text-white/70 hover:bg-white/10 hover:text-white">Login</Link><Link to="/signup" className="block rounded-lg px-3 py-2 text-xs text-white/70 hover:bg-white/10 hover:text-white">Sign Up</Link></div>}
+                    {user ? 
+                    <div>
+                    <Link to="/profile" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-white/70 hover:bg-white/10 hover:text-white">
+                        <UserRound size={15} />
+                        Profile
+                    </Link>
+                    <button disabled={locked} onClick={logout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-white/70 hover:bg-white/10 hover:text-white">
+                        <LogOut size={15} />
+                        Log out
+                    </button>
+                    </div> : <div>
+                                    <Link to="/login" className="block rounded-lg px-3 py-2 text-xs text-white/70 hover:bg-white/10 hover:text-white">
+                                        Login
+                                    </Link>
+                                    <Link to="/signup" className="block rounded-lg px-3 py-2 text-xs text-white/70 hover:bg-white/10 hover:text-white">
+                                        Sign Up
+                                    </Link>
+                                </div>
+                    }
                 </div>
             </div>
         </div>

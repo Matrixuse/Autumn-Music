@@ -11,6 +11,11 @@ import EquilizerPage from '../pages/EquilizerPage'
 import FeedbackPage from '../pages/FeedbackPage'
 import MoodChipsPage from '../pages/MoodChipsPage'
 import KeepListening from '../pages/KeepListening'
+import LikedSongPage from '../pages/LikedSongPage'
+import RecentlyPlayed from '../pages/RecentlyPlayed'
+import PlaylistsLibrary from '../pages/PlaylistsLibrary'
+import NewPlaylist from '../pages/NewPlaylist'
+import Profile from '../pages/Profile'
 
 export default function AppRoutes() {
     return (
@@ -22,6 +27,11 @@ export default function AppRoutes() {
                 <Route path="/keep-listening" element={<KeepListening />} />
                 <Route path="/explore" element={<Explore />} />
                 <Route path="/library" element={<Library />} />
+                <Route path="/liked-songs" element={<LikedSongPage />} />
+                <Route path="/recently-played" element={<RecentlyPlayed />} />
+                <Route path="/playlists" element={<PlaylistsLibrary />} />
+                <Route path="/new-playlist" element={<NewPlaylist />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/playlist/:playlistId/:playlistName?" element={<PlaylistsPage />} />
                 <Route path="/artist/:artistId/:artistName?" element={<ArtistPage />} />
                 <Route path="/album/:albumId/:albumName?" element={<AlbumsPage />} />

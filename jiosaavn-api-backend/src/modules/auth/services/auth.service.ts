@@ -29,7 +29,7 @@ export class AuthError extends Error {
   }
 }
 
-const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30
+const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 365 * 10
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '36232842622-0cfa2jhn3fv20iq16ro2c05uhhrj9td0.apps.googleusercontent.com'
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID)
 
@@ -157,6 +157,12 @@ export class AuthService {
     if (!session) {
       throw new AuthError('Authentication required', 401)
     }
+
+    const expiresAt = new Date(Date.now() + SESSION_DURATION_MS)
+    await database.collection<SessionDocument>('sessions').updateOne(
+      { _id: session._id },
+      { $set: { expiresAt } }
+    )
 
     const user = await database.collection<UserDocument>('users').findOne({ _id: session.userId })
     if (!user) {

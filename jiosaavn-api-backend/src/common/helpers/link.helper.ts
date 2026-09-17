@@ -30,8 +30,8 @@ export const createDownloadLinks = (encryptedMediaUrl: string) => {
 export const createImageLinks = (link: string) => {
   if (!link) return []
 
-  const qualities = ['50x50', '150x150', '500x500']
-  const qualityRegex = /150x150|50x50/
+  const qualities = ['500x500', '150x150', '50x50']
+  const qualityRegex = /\d+x\d+/g
   const protocolRegex = /^http:\/\//
 
   return qualities.map((quality) => ({

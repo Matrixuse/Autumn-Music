@@ -1,4 +1,6 @@
 import { usePlayer } from '../../context/PlayerContext'
+import SongActionsMenu from '../common/SongActionsMenu'
+import { Play } from 'lucide-react'
 
 const formatDuration = (seconds) => {
     const totalSeconds = Number(seconds || 0)
@@ -64,6 +66,9 @@ export default function Library({ songs = [] }) {
                                                     {song.title?.slice(0, 2) || 'AU'}
                                                 </div>
                                             )}
+                                            <button type="button" aria-label={`Play ${song.title || 'song'}`} onClick={(event) => { event.stopPropagation(); playTrack(song, visibleSongs) }} className="absolute inset-0 grid place-items-center bg-black/45 opacity-0 transition group-hover:opacity-100">
+                                                <span className="grid h-7 w-7 place-items-center rounded-full bg-transparent text-white"><Play size={27} fill="currentColor" /></span>
+                                            </button>
                                         </div>
 
                                         <div className="flex min-w-0 flex-col justify-between gap-1">
@@ -74,9 +79,14 @@ export default function Library({ songs = [] }) {
                                                 <span>{getArtistLabel(song.artist)}</span>
                                             </div>
                                         </div>
-                                        <span className="ml-auto whitespace-nowrap text-sm font-medium text-white/70">
-                                            {formatDuration(song.duration)}
-                                        </span>
+                                        <div className="relative ml-auto h-8 min-w-8 shrink-0">
+                                            <span className="absolute inset-0 grid place-items-center whitespace-nowrap text-sm font-medium text-white/70 transition-opacity group-hover:opacity-0">
+                                                {formatDuration(song.duration)}
+                                            </span>
+                                            <div className="absolute inset-0 flex items-center justify-end">
+                                                <SongActionsMenu song={song} queue={visibleSongs} />
+                                            </div>
+                                        </div>
                                     </div>
                                 </article>
                             ))}

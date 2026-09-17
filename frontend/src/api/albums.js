@@ -1,5 +1,6 @@
 import axiosInstance from './axiosInstance'
 import { getBestImageUrl } from '../utils/mediaQuality'
+import { mapWithConcurrency } from './requestQueue'
 
 export const albumMoodSeeds = [
   { mood: 'romantic', query: 'romantic album' },
@@ -92,13 +93,13 @@ export const getReleaseAlbums = async (mood = '', limit = 8) => {
     'latest Hindi albums',
     'new Bollywood albums'
   ].filter(Boolean))]
-  const results = await Promise.all(queries.map(async (query) => {
+  const results = await mapWithConcurrency(queries, async (query) => {
     try {
       return await searchAlbums(query, 8)
     } catch {
       return []
     }
-  }))
+  }, 3)
   const uniqueAlbums = new Map()
 
   results.flat().forEach((album) => {
@@ -112,16 +113,14 @@ export const getReleaseAlbums = async (mood = '', limit = 8) => {
 
 export const getAlbumsForYou = async (history = [], limit = 10) => {
   const queries = getDailyMoodOrder(history).slice(0, limit).map((item) => item.query)
-  const results = await Promise.all(
-    queries.map(async (query) => {
+  const results = await mapWithConcurrency(queries, async (query) => {
       try {
         const items = await searchAlbums(query, 6)
         return items.filter((item) => item.image || item.url)
       } catch {
         return []
       }
-    })
-  )
+    }, 3)
 
   const selected = []
   const seen = new Set()
@@ -141,7 +140,7 @@ export const getAlbumsForYou = async (history = [], limit = 10) => {
   if (selected.length >= limit) return selected.slice(0, limit)
 
   const fallbackQueries = ['romantic album', 'party album', 'chill album', 'happy album', 'sad album', 'travel album']
-  const fallback = await Promise.all(fallbackQueries.map((query) => searchAlbums(query, 3)))
+  const fallback = await mapWithConcurrency(fallbackQueries, (query) => searchAlbums(query, 3).catch(() => []), 3)
   const fallbackItems = fallback.flat().filter((item) => item.image || item.url)
 
   for (const album of fallbackItems) {

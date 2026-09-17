@@ -82,6 +82,10 @@ export const getBestImageUrl = (imageField) => {
 
   if (!candidates.length) return null
 
+  const upgradedCandidates = candidates.map((url) => url.replace(/(?:50x50|150x150)/g, '500x500'))
+  const highestQuality = upgradedCandidates.find((url) => /(?:^|[-_\/])500x500(?:[-_.\/]|$)/i.test(url))
+  if (highestQuality) return highestQuality
+
   const scored = candidates
     .map((url) => {
       const value = String(url || '').trim()

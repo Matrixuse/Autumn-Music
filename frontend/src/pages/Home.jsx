@@ -17,6 +17,8 @@ import { getBestImageUrl } from '../utils/mediaQuality'
 import { getHollywoodSongs } from '../api/songs'
 import { getMixForYouPlaylists } from '../api/playlists'
 import { getAlbumsForYou } from '../api/albums'
+import { mapWithConcurrency } from '../api/requestQueue'
+import Loader from '../components/common/Loader'
 
 const getDailySeed = () => `${new Date().getFullYear()}-${new Date().getMonth()}-${new Date().getDate()}`
 
@@ -31,6 +33,17 @@ const shuffleBySeed = (items = []) => {
   }
 
   return array
+}
+
+const shuffleItems = (items = []) => {
+  const shuffled = [...items]
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1))
+    ;[shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]]
+  }
+
+  return shuffled
 }
 
 const getSuggestedLibrarySongs = (fallbackSongs = [], limit = 24) => {
@@ -66,6 +79,19 @@ const fixedArtistNames = [
 
 const normalizeName = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
 
+const readDailyCache = (key) => {
+  try {
+    const cached = JSON.parse(localStorage.getItem(`autumn_home_${key}`) || 'null')
+    return Array.isArray(cached) ? cached : null
+  } catch {
+    return null
+  }
+}
+
+const writeDailyCache = (key, value) => {
+  localStorage.setItem(`autumn_home_${key}`, JSON.stringify(value))
+}
+
 const fetchArtistDetails = async (name) => {
   try {
     const response = await axiosInstance.get('/search/artists', {
@@ -92,7 +118,7 @@ export default function Home() {
   const [mixPlaylists, setMixPlaylists] = useState([])
   const [albumsForYou, setAlbumsForYou] = useState([])
   const { songs, loading, error } = useFetchSongs()
-  const { listenHistory } = usePlayer()
+  const { listenHistory, listenAgain } = usePlayer()
   const { songs: quickPickSongs, loading: quickLoading, error: quickError } = useFetchQuickPicks(listenHistory)
   const { songs: newReleaseSongs, loading: releaseLoading, error: releaseError } = useFetchNewReleases(listenHistory)
   const { songs: longSongs, loading: longLoading, error: longError } = useFetchLongSongs(listenHistory)
@@ -101,24 +127,46 @@ export default function Home() {
     const pool = [...(songs || []), ...(newReleaseSongs || []), ...(quickPickSongs || [])]
     return getHollywoodSongs(pool, 24)
   }, [songs, newReleaseSongs, quickPickSongs])
-  const listenAgainSongs = listenHistory.length ? listenHistory : librarySongs
+  const listenAgainSongs = listenAgain.length ? listenAgain : (listenHistory.length ? listenHistory : librarySongs)
 
   useEffect(() => {
     let isMounted = true
 
     const loadArtists = async () => {
-      const results = await Promise.all(fixedArtistNames.map(fetchArtistDetails))
-      if (isMounted) setArtists(results)
+      const cached = readDailyCache('artists')
+      if (cached?.length) {
+        setArtists(cached)
+        return
+      }
+
+      const results = await mapWithConcurrency(fixedArtistNames, fetchArtistDetails, 3)
+      const validResults = results.filter((artist) => artist?.image)
+      writeDailyCache('artists', validResults)
+      if (isMounted) setArtists(validResults)
     }
 
     const loadMixPlaylists = async () => {
+      const cached = readDailyCache('mix')
+      if (cached?.length) {
+        setMixPlaylists(cached)
+        return
+      }
       const results = await getMixForYouPlaylists(listenHistory, 10)
-      if (isMounted) setMixPlaylists(results)
+      const shuffled = shuffleItems(results)
+      writeDailyCache('mix', shuffled)
+      if (isMounted) setMixPlaylists(shuffled)
     }
 
     const loadAlbums = async () => {
+      const cached = readDailyCache('albums')
+      if (cached?.length) {
+        setAlbumsForYou(cached)
+        return
+      }
       const results = await getAlbumsForYou(listenHistory, 10)
-      if (isMounted) setAlbumsForYou(results)
+      const shuffled = shuffleItems(results)
+      writeDailyCache('albums', shuffled)
+      if (isMounted) setAlbumsForYou(shuffled)
     }
 
     loadArtists()
@@ -143,13 +191,10 @@ export default function Home() {
             <Hollywood songs={hollywoodSongs} />
             <Albums albums={albumsForYou} />
             <LongToListen songs={longSongs} />
-            {loading && <div className="py-4 text-sm text-white/60">Loading songs…</div>}
+            {(loading || quickLoading || releaseLoading || longLoading) && <div className="flex justify-center py-4"><Loader label="Loading more music" /></div>}
             {error && !loading && <div className="py-4 text-sm text-red-400">Unable to load songs right now.</div>}
-            {quickLoading && <div className="py-4 text-sm text-white/60">Preparing quick picks…</div>}
             {quickError && !quickLoading && <div className="py-4 text-sm text-red-400">Unable to load quick picks right now.</div>}
-            {releaseLoading && <div className="py-4 text-sm text-white/60">Finding fresh releases…</div>}
             {releaseError && !releaseLoading && <div className="py-4 text-sm text-red-400">Unable to load release picks right now.</div>}
-            {longLoading && <div className="py-4 text-sm text-white/60">Finding long-form tracks…</div>}
             {longError && !longLoading && <div className="py-4 text-sm text-red-400">Unable to load long-form picks right now.</div>}
         </div>
         <Footer />
