@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from 'react'
 import * as authApi from '../api/auth'
+import { usePlayer } from './PlayerContext'
 
 const AuthContext = createContext(null)
 
@@ -12,6 +13,7 @@ export const AuthProvider = ({ children }) => {
         return null 
     } 
   })
+  const { stopPlayback } = usePlayer()
 
   const login = async (credentials) => {
     const response = await authApi.login(credentials)
@@ -38,6 +40,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = async () => {
+    stopPlayback()
     try { await authApi.logout() } finally {
       localStorage.removeItem('autumn_user')
       setUser(null)

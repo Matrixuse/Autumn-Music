@@ -6,11 +6,11 @@ import { PlayerProvider } from './context/PlayerContext'
 const App = () => {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <PlayerProvider>
+      <PlayerProvider>
+        <AuthProvider>
           <AppRoutes />
-        </PlayerProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </PlayerProvider>
     </BrowserRouter>
   )
 }

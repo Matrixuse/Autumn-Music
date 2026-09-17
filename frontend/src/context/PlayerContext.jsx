@@ -110,6 +110,20 @@ export const PlayerProvider = ({ children }) => {
   }
 
   const togglePlay = () => setIsPlaying((playing) => !playing)
+  const stopPlayback = () => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      audioRef.current.removeAttribute('src')
+      audioRef.current.load()
+    }
+    setIsPlaying(false)
+    setCurrentTrack(null)
+    setQueue([])
+    setProgress(0)
+    setDuration(0)
+    setIsRecommendationQueue(false)
+  }
   const isLiked = (trackId) => likedSongs.some((song) => String(song.id) === String(trackId))
   const toggleLike = (track) => {
     if (!track?.id) return
@@ -226,7 +240,7 @@ export const PlayerProvider = ({ children }) => {
   const { audioRef } = useAudioPlayer({ src: currentTrack?.audio, isPlaying, volume, onTimeUpdate: handleTimeUpdate, onEnded: handleEnded })
 
   return (
-    <PlayerContext.Provider value={{ currentTrack, queue, listenHistory, likedSongs, isLiked, toggleLike, addToQueue, addTracksToQueue, listenAgain, addToListenAgain, isNotInterested, markNotInterested, restoreInterest, addToLibrary, removeFromLibrary, userPlaylists, setUserPlaylists, isPlaying, progress, duration, volume, setVolume, isShuffleEnabled, isRepeatEnabled, isQueueOpen, isRecommendationQueue, playTrack, setPlaybackQueue, togglePlay, next, previous, seek, toggleShuffle, toggleRepeat, toggleQueue, closeQueue }}>
+    <PlayerContext.Provider value={{ currentTrack, queue, listenHistory, likedSongs, isLiked, toggleLike, addToQueue, addTracksToQueue, listenAgain, addToListenAgain, isNotInterested, markNotInterested, restoreInterest, addToLibrary, removeFromLibrary, userPlaylists, setUserPlaylists, isPlaying, progress, duration, volume, setVolume, isShuffleEnabled, isRepeatEnabled, isQueueOpen, isRecommendationQueue, playTrack, setPlaybackQueue, togglePlay, stopPlayback, next, previous, seek, toggleShuffle, toggleRepeat, toggleQueue, closeQueue }}>
         {children}
         <audio ref={audioRef} src={currentTrack?.audio || undefined} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} onEnded={handleEnded} />
     </PlayerContext.Provider>
