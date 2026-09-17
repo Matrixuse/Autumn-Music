@@ -158,7 +158,7 @@ export default function AuthPage({ mode = 'login' }) {
                                 Password
                             </span>
                             <div className="relative">
-                                <input required minLength="8" maxLength="128" type={showPassword ? 'text' : 'password'} name="password" value={form.password} onChange={update} placeholder="At least 8 characters" className="w-full rounded-xl border border-white/10 bg-white/6 px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-white/25 focus:border-[#e6a44a] focus:bg-white/9" />
+                                <input required minLength="8" maxLength="128" autoComplete={isLogin ? 'current-password' : 'new-password'} type={showPassword ? 'text' : 'password'} name="password" value={form.password} onChange={update} placeholder="At least 8 characters" className="w-full rounded-xl border border-white/10 bg-white/6 px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-white/25 focus:border-[#e6a44a] focus:bg-white/9" />
                                 <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/35 hover:text-white">
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>

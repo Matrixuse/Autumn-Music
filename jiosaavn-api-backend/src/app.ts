@@ -32,7 +32,17 @@ export class App {
   private initializeGlobalMiddlewares() {
     this.app.use(logger())
     this.app.use(prettyJSON())
-    this.app.use(cors())
+    const allowedOrigins = new Set([
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'https://autumn-its-listening.onrender.com',
+      ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL.replace(/\/$/, '')] : [])
+    ])
+
+    this.app.use(cors({
+      origin: (origin) => origin && allowedOrigins.has(origin) ? origin : undefined,
+      credentials: true
+    }))
   }
 
   private initializeSwaggerUI() {
